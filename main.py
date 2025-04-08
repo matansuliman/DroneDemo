@@ -15,12 +15,6 @@ from plots import plot_log
 PATH_TO_XML = "skydio_x2/scene.xml"
 
 if __name__ == "__main__":
-
-    import os
-    print("cwd:", os.getcwd())
-    print("Exists:", os.path.exists("skydio_x2/scene.xml"))
-    print("Exists include:", os.path.exists("skydio_x2/x2.xml"))
-
     model = mujoco.MjModel.from_xml_path(PATH_TO_XML)
     data = mujoco.MjData(model)
     
