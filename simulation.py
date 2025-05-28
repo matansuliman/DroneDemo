@@ -5,9 +5,9 @@ from drone_model import QuadrotorController
 from platform_model import MovingPlatform
 
 DISTANCE_FROM_PLATFORM = 0.01
-CAMERA_DISTANCE_MULTIPLIER = 1.5
+CAMERA_DISTANCE_MULTIPLIER = 1.3
 
-CAMERA_DISTANCE_OFFSET = 3
+CAMERA_DISTANCE_OFFSET = 4
 PAUSE_SLEEP_SEC = 0.1
 
 class SimulationRunner:

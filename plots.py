@@ -29,3 +29,5 @@ def plot_log(drone_log, platform_log):
     plt.tight_layout()
     filename = "output_plot.png"
     plt.savefig(filename)
+
+

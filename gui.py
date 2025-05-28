@@ -36,10 +36,10 @@ class TargetControlGUI(QtWidgets.QWidget):
         self.xy_plot.setAspectLocked(True)
         self.xy_plot.showGrid(x=True, y=True)
         self.xy_current_dot = pg.ScatterPlotItem(pen=None, brush='g', size=10)
-        self.xy_target_dot = pg.ScatterPlotItem(pen=None, brush='r', size=10)
+        #self.xy_target_dot = pg.ScatterPlotItem(pen=None, brush='r', size=10)
         self.xy_platform_dot = pg.ScatterPlotItem(pen=None, brush='b', size=10)
         self.xy_plot.addItem(self.xy_current_dot)
-        self.xy_plot.addItem(self.xy_target_dot)
+        #self.xy_plot.addItem(self.xy_target_dot)
         self.xy_plot.addItem(self.xy_platform_dot)
         visual_layout.addWidget(self.xy_plot)
 
@@ -52,10 +52,10 @@ class TargetControlGUI(QtWidgets.QWidget):
         self.z_plot.getAxis('left').setLabel('Altitude (m)')
 
         self.z_current_line = pg.InfiniteLine(pos=0, angle=0, pen='g')
-        self.z_target_line = pg.InfiniteLine(pos=0, angle=0, pen='r')
+        #self.z_target_line = pg.InfiniteLine(pos=0, angle=0, pen='r')
         self.z_platform_line = pg.InfiniteLine(pos=0, angle=0, pen='b')
         self.z_plot.addItem(self.z_current_line)
-        self.z_plot.addItem(self.z_target_line)
+        #self.z_plot.addItem(self.z_target_line)
         self.z_plot.addItem(self.z_platform_line)
         visual_layout.addWidget(self.z_plot)
 
@@ -89,21 +89,6 @@ class TargetControlGUI(QtWidgets.QWidget):
         self.camera_label = QtWidgets.QLabel()
         self.camera_label.setFixedSize(320, 240)
         layout.addWidget(self.camera_label)
-
-        self.toggle_camera_btn = QtWidgets.QPushButton("Toggle Camera")
-        self.toggle_camera_btn.clicked.connect(self.toggle_camera)
-        btn_layout.addWidget(self.toggle_camera_btn)
-
-    def toggle_camera(self):
-        if not self.camera_streamer:
-            return
-        if self.camera_enabled:
-            self.camera_streamer.stop()
-            self.toggle_camera_btn.setText("Start Camera")
-        else:
-            self.camera_streamer.start()
-            self.toggle_camera_btn.setText("Stop Camera")
-        self.camera_enabled = not self.camera_enabled
 
     def update_camera_view(self, frame):
         h, w, ch = frame.shape
@@ -153,7 +138,7 @@ class TargetControlGUI(QtWidgets.QWidget):
             tx, ty, tz = self.drone.target
             error_xy = np.linalg.norm(np.array([tx, ty]) - np.array([pos[0], pos[1]]))
 
-            self.land_button.setVisible(not self.landing_active and error_xy < 0.1)
+            self.land_button.setVisible(not self.landing_active and error_xy < 1)
 
             if self.landing_active:
                 self.drone.apply_landing()
@@ -161,8 +146,8 @@ class TargetControlGUI(QtWidgets.QWidget):
             pos = self.drone.gps.get_true_pos()
 
         tx, ty, tz = self.drone.target
-        self.xy_target_dot.setData([{'pos': [tx, ty]}])
-        self.z_target_line.setValue(tz)
+        #self.xy_target_dot.setData([{'pos': [tx, ty]}])
+        #self.z_target_line.setValue(tz)
 
         px, py, pz = self.platform.gps.get_true_pos()
         self.xy_platform_dot.setData([{'pos': [px, py]}])
