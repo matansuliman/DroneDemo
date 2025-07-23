@@ -10,8 +10,7 @@ import mujoco
 from PyQt5.QtWidgets import QApplication
 from scipy.spatial.transform import Rotation as R
 
-from drone_model import QuadrotorController
-from platform_model import MovingPlatform
+from models import QuadrotorController, MovingPlatform
 from streamer import CameraStreamer
 from gui import TargetControlGUI
 

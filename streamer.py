@@ -1,4 +1,3 @@
-# file: camera_streamer.py
 from PyQt5.QtCore import pyqtSignal, QObject
 import numpy as np
 import mujoco
@@ -11,19 +10,19 @@ FPS = 20
 WIDTH = 320
 HEIGHT = 240
 
-
 DISTANCE = 0
 AZIMUTH = 0
 ELEVATION = -90
 
+
 class CameraStreamer(QObject):
     frame_ready = pyqtSignal(np.ndarray)
 
-    def __init__(self, model, data, attached_body, update_rate=FPS):
+    def __init__(self, orchestrator, attached_body, update_rate =FPS):
         super().__init__()
-        self.model = model
-        self.data = data
+        self.env = orchestrator._env
         self.attached_body = attached_body
+        self.orchestrator = orchestrator
         self.update_rate = update_rate
         self.running = False
 
@@ -54,21 +53,21 @@ class CameraStreamer(QObject):
         offscreen_window = glfw.create_window(self.width, self.height, "", None, None)
         glfw.make_context_current(offscreen_window)
 
-        scene = mujoco.MjvScene(self.model, maxgeom=1000)
-        context = mujoco.MjrContext(self.model, mujoco.mjtFontScale.mjFONTSCALE_150)
+        scene = mujoco.MjvScene(self.env.model, maxgeom=1000)
+        context = mujoco.MjrContext(self.env.model, mujoco.mjtFontScale.mjFONTSCALE_150)
 
         while self.running:
-            self.cam.lookat[:] = self.attached_body.gps.get_true_pos()
+            self.cam.lookat[:] = self.attached_body.sensors['gps'].getTruePos()
             self.cam.distance = DISTANCE
             self.cam.azimuth = AZIMUTH
             self.cam.elevation = ELEVATION
 
-            if self.attached_body.paused:
+            if self.orchestrator.loop_paused:
                 time.sleep(1.0 / self.update_rate)
                 continue
 
             mujoco.mjv_updateScene(
-                self.model, self.data, self.opt, None, self.cam,
+                self.env.model, self.env.data, self.opt, None, self.cam,
                 mujoco.mjtCatBit.mjCAT_ALL, scene
             )
 

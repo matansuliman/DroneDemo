@@ -1,15 +1,16 @@
-# file: target_slider_gui.py
 import sys
 import numpy as np
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtGui import QImage, QPixmap
 import pyqtgraph as pg
 
+
 class TargetControlGUI(QtWidgets.QWidget):
-    def __init__(self, drone, platform, camera_streamer):
+    def __init__(self, orchestrator, camera_streamer):
+        
         super().__init__()
-        self.drone = drone
-        self.platform = platform
+        self.objects = orchestrator._objects
+        self.orchestrator = orchestrator
         self.landing_active = False
 
         self.camera_streamer = camera_streamer
@@ -26,7 +27,7 @@ class TargetControlGUI(QtWidgets.QWidget):
         self.pos_label = QtWidgets.QLabel("Current Position: (0.00, 0.00, 0.00)")
         layout.addWidget(self.pos_label)
 
-        self.vel_label = QtWidgets.QLabel(f"Velocity: {self.platform.velocity.tolist()}")
+        self.vel_label = QtWidgets.QLabel(f"Velocity: {self.objects['platform'].velocity.tolist()}")
         layout.addWidget(self.vel_label)
 
         visual_layout = QtWidgets.QHBoxLayout()
@@ -61,10 +62,10 @@ class TargetControlGUI(QtWidgets.QWidget):
 
         layout.addLayout(visual_layout)
 
-        self.vel_x = self._create_slider(-5.0, 5.0, self.platform.velocity[0], "Velocity X", self.update_velocity, step=0.1)
+        self.vel_x = self._create_slider(-5.0, 5.0, self.objects['platform'].velocity[0], "Velocity X", self.update_velocity, step=0.1)
         layout.addLayout(self.vel_x['layout'])
 
-        self.vel_y = self._create_slider(-5.0, 5.0, self.platform.velocity[1], "Velocity Y", self.update_velocity, step=0.1)
+        self.vel_y = self._create_slider(-5.0, 5.0, self.objects['platform'].velocity[1], "Velocity Y", self.update_velocity, step=0.1)
         layout.addLayout(self.vel_y['layout'])
 
         btn_layout = QtWidgets.QHBoxLayout()
@@ -116,40 +117,40 @@ class TargetControlGUI(QtWidgets.QWidget):
         return {'layout': slider_layout, 'slider': slider, 'label': label_widget, 'min': min_val, 'step': step}
 
     def update_velocity(self):
-        vx = self._slider_val(self.vel_x)
-        vy = self._slider_val(self.vel_y)
-        self.platform.velocity = np.array([vx, vy, self.platform.velocity[2]])
-        self.vel_label.setText(f"Velocity: {[round(vx,2), round(vy,2), round(self.platform.velocity[2],2)]}")
+        new_vx = self._slider_val(self.vel_x)
+        new_vy = self._slider_val(self.vel_y)
+        new_vz = self.objects['platform'].velocity[2]  # Keep Z velocity unchanged
+        self.objects['platform'].velocity = np.array([new_vx, new_vy, new_vz])
+
+        self.vel_label.setText(f"Velocity: {[round(new_vx, 2), round(new_vy, 2), round(new_vz, 2)]}")
 
     def _slider_val(self, slider_dict):
         return slider_dict['min'] + slider_dict['slider'].value() * slider_dict['step']
 
     def update_target(self):
-        if self.drone.log['x']:
+        if self.objects['drone_controller'].log['x']:
             pos = (
-                self.drone.log['x'][-1],
-                self.drone.log['y'][-1],
-                self.drone.log['z'][-1]
+                self.objects['drone_controller'].log['x'][-1],
+                self.objects['drone_controller'].log['y'][-1],
+                self.objects['drone_controller'].log['z'][-1]
             )
             self.pos_label.setText(f"Current Position: ({pos[0]:.2f}, {pos[1]:.2f}, {pos[2]:.2f})")
             self.xy_current_dot.setData([{'pos': [pos[0], pos[1]]}])
             self.z_current_line.setValue(pos[2])
 
-            tx, ty, tz = self.drone.target
+            tx, ty, tz = self.objects['drone_controller'].target
             error_xy = np.linalg.norm(np.array([tx, ty]) - np.array([pos[0], pos[1]]))
 
             self.land_button.setVisible(not self.landing_active and error_xy < 1)
 
             if self.landing_active:
-                self.drone.apply_landing()
+                self.objects['drone_controller'].apply_landing()
         else:
-            pos = self.drone.gps.get_true_pos()
+            pos = self.objects['drone'].getTruePos()
 
-        tx, ty, tz = self.drone.target
-        #self.xy_target_dot.setData([{'pos': [tx, ty]}])
-        #self.z_target_line.setValue(tz)
+        tx, ty, tz = self.objects['drone_controller'].target
 
-        px, py, pz = self.platform.gps.get_true_pos()
+        px, py, pz = self.objects['platform'].getTruePos()
         self.xy_platform_dot.setData([{'pos': [px, py]}])
         self.z_platform_line.setValue(pz)
 
@@ -174,13 +175,13 @@ class TargetControlGUI(QtWidgets.QWidget):
         self.z_plot.setYRange(min_z - margin, max_z + margin, padding=0)
 
     def on_pause(self):
-        self.drone.paused = True
+        self.orchestrator.pause()
 
     def on_resume(self):
-        self.drone.paused = False
+        self.orchestrator.resume()
 
     def on_terminate(self):
-        self.drone.terminated = True
+        self.orchestrator.terminate()
         QtCore.QTimer.singleShot(200, QtWidgets.QApplication.quit)
 
     def on_land(self):
@@ -188,7 +189,7 @@ class TargetControlGUI(QtWidgets.QWidget):
         self.land_button.setVisible(False)
 
     def check_simulation_status(self):
-        if self.drone.terminated:
+        if self.orchestrator.loop_terminated:
             self.close()
 
 def launch_target_slider(drone, platform):

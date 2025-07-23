@@ -6,6 +6,7 @@ DEFAULT_SCALE_NOISE_STD = 0.5
 
 Z_BIAS_SCALE = 0.2
 
+
 class GPSNoise:
     """
     GPSNoiseModel simulates GPS noise with:
