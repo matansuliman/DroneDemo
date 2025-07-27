@@ -1,13 +1,23 @@
 import numpy as np
 
 DEFAULT_BIAS_STD = 2
-DEFAULT_DRIFT_RATE_STD = 0.01
-DEFAULT_SCALE_NOISE_STD = 0.5
+DEFAULT_DRIFT_RATE_STD = 0.001
+DEFAULT_SCALE_NOISE_STD = 0.05
 
 Z_BIAS_SCALE = 0.2
 
+class basicNoise():
+    def __init__(self, env):
+        self._env = env
 
-class GPSNoise:
+    def step(self, pos: np.ndarray, dt: float):
+        raise NotImplementedError("Subclasses should implement this method")
+    
+    def reset(self):
+        raise NotImplementedError("Subclasses should implement this method")
+
+
+class GPSNoise(basicNoise):
     """
     GPSNoiseModel simulates GPS noise with:
     - static bias (fixed offset)
@@ -15,10 +25,12 @@ class GPSNoise:
     - multiplicative Gaussian noise (scaling factor)
     """
 
-    def __init__(self, 
+    def __init__(self, env,
                  bias_stddev: float = DEFAULT_BIAS_STD, 
                  drift_rate_stddev: float = DEFAULT_DRIFT_RATE_STD, 
                  scale_noise_stddev: float = DEFAULT_SCALE_NOISE_STD):
+        
+        super().__init__(env)
         self.bias = np.random.normal(0, bias_stddev, size=3)
         self.drift_rate = np.random.normal(0, drift_rate_stddev, size=3)
         self.drift = np.zeros(3)
@@ -26,11 +38,11 @@ class GPSNoise:
 
         self.bias[2] *= Z_BIAS_SCALE
 
-    def step(self, true_position: np.ndarray, dt) -> np.ndarray:
-        self.drift += self.drift_rate * dt
+    def step(self):
+        self.drift += self.drift_rate * self._env.dt
         offset = self.bias + self.drift
         scale = np.random.normal(1.0, self.scale_noise_stddev, size=3)
-        return (true_position + offset) * scale
+        return offset, scale
 
     def reset(self):
         self.drift = np.zeros(3)

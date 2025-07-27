@@ -20,26 +20,23 @@ VELOCITY_FF_COEF = 1.74
 LANDING_ALT_LIMITS = (-0.20, 0.10)
 LANDING_ALT_FF = 0.02
 
-
-class QuadrotorController:
-    def __init__(self, env, drone):
+class basicController:
+    def __init__(self, env, plant):
         self._env = env
-        self._drone = drone
-        
-        # Outer loop: Position controllers for x, y, and z.
-        self._pid_x = PID(Kp=0.15, Kd=0.42, setpoint=0, output_limits=CMD_ANGLE_LINITS)
-        self._pid_y = PID(Kp=0.15, Kd=0.42, setpoint=0, output_limits=CMD_ANGLE_LINITS)
-        self._pid_z = PID(Kp=0.15, Kd=0.55, setpoint=1, output_limits=ALT_LIMITS)
-        self._gravity_ff = ALT_FF
+        self._plant = plant
+        self._log = None
 
-        # Inner loop: Attitude controllers for roll, pitch, and yaw.
-        self._pid_roll  = PID(Kp=0.50, Kd=0.30, setpoint=0, output_limits=ANGLE_LINITS)
-        self._pid_pitch = PID(Kp=0.50, Kd=0.20, setpoint=0, output_limits=ANGLE_LINITS)
-        self._pid_yaw   = PID(Kp=0.50, Kd=0.50, setpoint=0, output_limits=(-2.00, 2.00))
+    @property
+    def log(self):
+        return self._log
+    
+    def step(self):
+        raise NotImplementedError("Subclasses should implement this method")
 
-        # Initialize target position and feedforward terms
-        self._target = np.zeros(3, dtype=np.float64)
-        self._target_z_ff = HOVER_ALT_FF
+
+class QuadrotorController(basicController):
+    def __init__(self, env, drone):
+        super().__init__(env, drone)
 
         self._log = {
             'time': [],
@@ -47,36 +44,61 @@ class QuadrotorController:
             'roll': [], 'pitch': [], 'yaw': [],
             'roll_cmd': [], 'pitch_cmd': [], 'yaw_cmd': []
         }
+        
+        self.pids = {
+            'x': PID(Kp=0.15, Kd=0.42, setpoint=0, output_limits=CMD_ANGLE_LINITS),
+            'y': PID(Kp=0.15, Kd=0.42, setpoint=0, output_limits=CMD_ANGLE_LINITS),
+            'z': PID(Kp=0.15, Kd=0.55, setpoint=1, output_limits=ALT_LIMITS),
+            'roll': PID(Kp=0.50, Kd=0.30, setpoint=0, output_limits=ANGLE_LINITS),
+            'pitch': PID(Kp=0.50, Kd=0.20, setpoint=0, output_limits=ANGLE_LINITS),
+            'yaw': PID(Kp=0.50, Kd=0.50, setpoint=0, output_limits=(-2.00, 2.00))
+        }
+
+        self.ff = {
+            'target_x': 0,
+            'target_y': 0,
+            'target_z': HOVER_ALT_FF,
+            'gravity': ALT_FF
+        }
+
+        # Initialize target position
+        self._target = np.zeros(3, dtype=np.float64)
     
     @property
     def target(self):
         return self._target
 
-    @property
-    def log(self):
-        return self._log
-    
-    def apply_landing(self):
-        self._target_z_ff = LANDING_ALT_FF
-        self._pid_z.output_limits = LANDING_ALT_LIMITS
+    def update_target(self, mode, data=None):
+        if mode == 'hardcode':
+            self._env.data.qpos[:3] = data['qpos']
+            self._env.data.qvel[:] = 0
+            self._env.data.qacc[:] = 0
+            self._env.data.qpos[3:7] = [1, 0, 0, 0]  # upright orientation
+        
+        elif mode == 'follow': # Drone target follows the platform + 0.5m in Z
+            self._target = data['new_target_pos'].copy() 
 
-    def update_target(self, new_target_pos: np.ndarray, new_target_vel: np.ndarray):
+            # Feedforward terms
+            self.ff['target_x'] = VELOCITY_FF_COEF * data['new_target_vel'][0]
+            self.ff['target_y'] = VELOCITY_FF_COEF * data['new_target_vel'][1]
 
-        # Drone target follows the platform + 0.5m in Z
-        self._target = new_target_pos.copy()
-
-        # Feedforward terms
-        target_x_ff = VELOCITY_FF_COEF * new_target_vel[0]
-        target_y_ff = VELOCITY_FF_COEF * new_target_vel[1]
-
-        # Update PID setpoints
-        self._pid_x.setpoint = self._target[0] + target_x_ff
-        self._pid_y.setpoint = self._target[1] + target_y_ff
-        self._pid_z.setpoint = self._target[2] + self._target_z_ff
+            # Update PID setpoints
+            self.pids['x'].setpoint = self._target[0] + self.ff['target_x']
+            self.pids['y'].setpoint = self._target[1] + self.ff['target_y']
+            self.pids['z'].setpoint = self._target[2] + self.ff['target_z']
+        
+        elif mode == 'landing':
+            self.ff['target_z'] = LANDING_ALT_FF
+            self.pids['z'].output_limits = LANDING_ALT_LIMITS
+        
+        else:
+            raise ValueError(f"Unknown mode: {mode}")
 
     def _outer_loop(self):
 
-        pos = self._drone.getTruePos()
+        pos = self._plant.getPos(mode='no_noise')
+        noise_pos = self._plant.getPos(mode='noise')
+        noise_pos = pos
 
         # Log
         self._log['x'].append(pos[0])
@@ -88,11 +110,11 @@ class QuadrotorController:
         previous_time = current_time - self._env.dt
         
         if  (current_time // interval) != (previous_time // interval):
-            self._pid_pitch.setpoint = self._pid_x(pos[0])
-            self._pid_roll.setpoint = -self._pid_y(pos[1])
+            self.pids['pitch'].setpoint = self.pids['x'](noise_pos[0])
+            self.pids['roll'].setpoint = -self.pids['y'](noise_pos[1])
 
         # Altitude throttle
-        throttle = self._pid_z(pos[2]) + self._gravity_ff
+        throttle = self.pids['z'](noise_pos[2]) + self.ff['gravity']
         
         return throttle
     
@@ -109,9 +131,9 @@ class QuadrotorController:
         self.log['yaw'].append(yaw)
         
         # Control signals
-        roll_cmd = self._pid_roll(roll)
-        pitch_cmd = self._pid_pitch(pitch)
-        yaw_cmd = self._pid_yaw(yaw)
+        roll_cmd = self.pids['roll'](roll)
+        pitch_cmd = self.pids['pitch'](pitch)
+        yaw_cmd = self.pids['yaw'](yaw)
 
         # Log
         self._log['roll_cmd'].append(roll_cmd)
@@ -123,7 +145,7 @@ class QuadrotorController:
     def _apply_cmds(self, throttle, roll_cmd, pitch_cmd, yaw_cmd):
 
         d = self._env.data.ctrl
-        m = self._drone.motorMap
+        m = self._plant.motorMap
 
         # Motor Mixing Algorithem (MMA): Combine control signals to actuators
         d[m['thrust1']] = throttle + roll_cmd + pitch_cmd + yaw_cmd
@@ -166,30 +188,38 @@ _ins_update()
 """
 
 
-class MovingPlatformController:
+class MovingPlatformController(basicController):
     def __init__(self, env, platform):
-        self._env = env
-        self._platform = platform
+        super().__init__(env, platform)
+        self._locks_activated = False
 
         self._log = {
             'time': [], 
             'x': [], 'y': [], 'z': []
         }
-
+    
+        
     @property
-    def log(self):
-        return self._log
+    def locks_activated(self):
+        return self._locks_activated
+
+    
+    def activate_locks(self):
+        self._locks_activated = True
+
+    def deactivate_locks(self):
+        self._locks_activated = False
 
     def step(self):
         # Update position based on velocity
-        curr_pos = self._platform.getTruePos()
-        new_pos = curr_pos + self._platform.velocity * self._env.dt
-        self._env.data.qpos[self._platform._joint_x_id] = new_pos[0]
-        self._env.data.qpos[self._platform._joint_y_id] = new_pos[1]
+        curr_pos = self._plant.getPos(mode='no_noise')
+        new_pos = curr_pos + self._plant.velocity * self._env.dt
+        self._env.data.qpos[self._plant._joint_x_id] = new_pos[0]
+        self._env.data.qpos[self._plant._joint_y_id] = new_pos[1]
 
         # Logging true position
         self._log['time'].append(self._env.data.time)
-        pos = self._platform.getTruePos()
+        pos = self._plant.getPos(mode='no_noise')
         self._log['x'].append(pos[0])
         self._log['y'].append(pos[1])
         self._log['z'].append(pos[2])

@@ -144,13 +144,13 @@ class TargetControlGUI(QtWidgets.QWidget):
             self.land_button.setVisible(not self.landing_active and error_xy < 1)
 
             if self.landing_active:
-                self.objects['drone_controller'].apply_landing()
+                self.objects['drone_controller'].update_target(mode='landing')
         else:
-            pos = self.objects['drone'].getTruePos()
+            pos = self.objects['drone'].getPos(mode='no_noise')
 
         tx, ty, tz = self.objects['drone_controller'].target
 
-        px, py, pz = self.objects['platform'].getTruePos()
+        px, py, pz = self.objects['platform'].getPos(mode='no_noise')
         self.xy_platform_dot.setData([{'pos': [px, py]}])
         self.z_platform_line.setValue(pz)
 
@@ -175,13 +175,13 @@ class TargetControlGUI(QtWidgets.QWidget):
         self.z_plot.setYRange(min_z - margin, max_z + margin, padding=0)
 
     def on_pause(self):
-        self.orchestrator.pause()
+        self.orchestrator.ChangeLoopState(pause=True)
 
     def on_resume(self):
-        self.orchestrator.resume()
+        self.orchestrator.ChangeLoopState(resume=True)
 
     def on_terminate(self):
-        self.orchestrator.terminate()
+        self.orchestrator.ChangeLoopState(terminate=True)
         QtCore.QTimer.singleShot(200, QtWidgets.QApplication.quit)
 
     def on_land(self):
@@ -189,7 +189,7 @@ class TargetControlGUI(QtWidgets.QWidget):
         self.land_button.setVisible(False)
 
     def check_simulation_status(self):
-        if self.orchestrator.loop_terminated:
+        if self.orchestrator.isLoopState('terminate'):
             self.close()
 
 def launch_target_slider(drone, platform):

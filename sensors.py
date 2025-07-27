@@ -2,38 +2,43 @@ import numpy as np
 from scipy.spatial.transform import Rotation as R
 from noises import GPSNoise
 
-
-class GPS:
-    def __init__(self, env, _bodyId: int):
+class basicSensor():
+    def __init__(self, env, bodyId: int):
         self._env = env
-        self._bodyId = _bodyId
-
-        self.gps_noise = GPSNoise() # Initialize GPS noise model
-
+        self._bodyId = bodyId
+    
     @property
     def bodyId(self):
         return self._bodyId
+    
+    def getPos(self, mode='noise'):
+        raise NotImplementedError("Subclasses should implement this method")
 
-    def getPos(self):
-        return self.gps_noise.step(self._env.data.xpos[self._bodyId], self._env.dt)       
+
+class GPS(basicSensor):
+    def __init__(self, env, bodyId: int):
+        super().__init__(env, bodyId)
+        self._noise = GPSNoise(self._env) # Initialize GPS noise model
+
+    def getPos(self, mode='noise'):
+        if mode == 'noise':
+            offset, scale = self._noise.step()
+            return (self.getPos(mode='no_noise') + offset) * scale
         
-    def getTruePos(self):
-        return self._env.data.xpos[self._bodyId]
-
-
-class INS:
-    def __init__(self, env, _bodyId: int):
-        self._env = env
-        self._bodyId = _bodyId
+        elif mode == 'no_noise':
+            return self._env.data.xpos[self._bodyId]
         
+        else:
+            raise ValueError(f"Unknown mode: {mode}")
+        
+    
+class INS(basicSensor):
+    def __init__(self, env, bodyId: int):
+        super().__init__(env, bodyId)
         # Initialize position, velocity, and orientation
         self._position = self._env.data.xpos[self._bodyId]  # Initial position
         self._velocity = np.array([0.0, 0.0, 0.0])  # Initial velocity
         self._orientation = np.array([0.0, 0.0, 0.0])  # Euler angles (roll, pitch, yaw)
-
-    @property
-    def bodyId(self):
-        return self._bodyId
 
     @property
     def position(self):

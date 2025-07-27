@@ -5,7 +5,7 @@ import glfw
 import threading
 import time
 
-FPS = 20
+FPS = 60
 
 WIDTH = 320
 HEIGHT = 240
@@ -57,12 +57,12 @@ class CameraStreamer(QObject):
         context = mujoco.MjrContext(self.env.model, mujoco.mjtFontScale.mjFONTSCALE_150)
 
         while self.running:
-            self.cam.lookat[:] = self.attached_body.sensors['gps'].getTruePos()
+            self.cam.lookat[:] = self.attached_body.sensors['gps'].getPos(mode='no_noise')
             self.cam.distance = DISTANCE
             self.cam.azimuth = AZIMUTH
             self.cam.elevation = ELEVATION
 
-            if self.orchestrator.loop_paused:
+            if self.orchestrator.isLoopState('pause'):
                 time.sleep(1.0 / self.update_rate)
                 continue
 

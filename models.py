@@ -1,31 +1,19 @@
+import numpy as np
 from sensors import GPS, INS
 
 XML_DRONE_NAME = 'x2'
 XML_ACCEL_SENSOR_NAME = 'body_linacc'
 XML_GYRO_SENSOR_NAME = 'body_gyro'
 
-
-class Drone:
-    def __init__(self, env, type='quadrotor'):
-        self._type = type
+class basicModel:
+    def __init__(self, env, name, type= 'basicModel'):
         self._env = env
-        self._bodyId = next(i for i in range(env.model.nbody) if env.model.body(i).name == XML_DRONE_NAME)
+        self._type = type
+        self._bodyId = next(i for i in range(env.model.nbody) if env.model.body(i).name == name)
 
-        self._motorMap = self._init_motor_map()
-        self._sensors = self._init_sensors()
-    
-    def _init_motor_map(self):
-        # Map motor actuator names to indices
-        motor_names = [self._env.model.actuator(i).name for i in range(self._env.model.nu)]
-        return {name: i for i, name in enumerate(motor_names)}
-    
-    def _init_sensors(self):
-        sensors = {}
-        sensors['gps'] = GPS(self._env, self._bodyId)
-        sensors['ins'] = INS(self._env, self._bodyId)
-        sensors['accel_sensor_id'] = next(i for i in range(self._env.model.nsensor) if self._env.model.sensor(i).name == XML_ACCEL_SENSOR_NAME)
-        sensors['gyro_sensor_id'] = next(i for i in range(self._env.model.nsensor) if self._env.model.sensor(i).name == XML_GYRO_SENSOR_NAME)
-        return sensors
+    @property
+    def type(self):
+        return self._type
 
     @property
     def sensors(self):
@@ -34,52 +22,54 @@ class Drone:
     @property
     def bodyId(self):
         return self._bodyId
+    
+    def getPos(self, mode='noise'):
+        return self.sensors['gps'].getPos(mode=mode)
+
+
+class Drone(basicModel):
+    def __init__(self, env, type='quadrotor'):
+        super().__init__(env, XML_DRONE_NAME, type)
+        self._sensors = {
+            'gps': GPS(self._env, self._bodyId),
+            'ins': INS(self._env, self._bodyId),
+            'accel_sensor_id': next(i for i in range(self._env.model.nsensor) if self._env.model.sensor(i).name == XML_ACCEL_SENSOR_NAME),
+            'gyro_sensor_id': next(i for i in range(self._env.model.nsensor) if self._env.model.sensor(i).name == XML_GYRO_SENSOR_NAME)
+        }
+
+        # Map motor actuator names to indices
+        _motor_names = [self._env.model.actuator(i).name for i in range(self._env.model.nu)]
+        self._motorMap = {name: i for i, name in enumerate(_motor_names)}
+    
+    @property
+    def sensors(self):
+        return self._sensors
     
     @property
     def motorMap(self):
         return self._motorMap
-    
-    def getTruePos(self):
-        return self.sensors['gps'].getTruePos()
 
 
 
-import numpy as np
-from sensors import GPS, INS
 
-XML_NAME = 'platform'
-XML_JOINT_NAME_X = 'platform_x'
-XML_JOINT_NAME_Y = 'platform_y'
+
+XML_PLATFORM_NAME = 'platform'
+XML_PLATFORM_JOINT_NAME_X = 'platform_x'
+XML_PLATFORM_JOINT_NAME_Y = 'platform_y'
 
 DEFAULT_VELOCITY = [0.0, 0.0, 0.0]
 
 
-class MovingPlatform:
+class MovingPlatform(basicModel):
     def __init__(self, env, type= 'moving_platform', velocity=DEFAULT_VELOCITY):
-        self._type = type
-        self._env = env
-        self._bodyId = next(i for i in range(env.model.nbody) if env.model.body(i).name == XML_NAME)
-
-        self._sensors = self._init_sensors()
-
+        super().__init__(env, XML_PLATFORM_NAME, type)
+        self._sensors = {
+                'gps': GPS(self._env, self._bodyId),
+                'ins': INS(self._env, self._bodyId)
+            }
         self._velocity = np.array(velocity, dtype=np.float64)
-
-        self._joint_x_id = env.model.joint(XML_JOINT_NAME_X).qposadr
-        self._joint_y_id = env.model.joint(XML_JOINT_NAME_Y).qposadr
-
-    def _init_sensors(self):
-            sensors = {}
-            sensors['gps'] = GPS(self._env, self._bodyId)
-            sensors['ins'] = INS(self._env, self._bodyId)
-            return sensors
-
-    @property
-    def sensors(self):
-        return self._sensors
-    
-    @property
-    def bodyId(self):
-        return self._bodyId
+        self._joint_x_id = env.model.joint(XML_PLATFORM_JOINT_NAME_X).qposadr
+        self._joint_y_id = env.model.joint(XML_PLATFORM_JOINT_NAME_Y).qposadr
 
     @property
     def velocity(self):
@@ -96,7 +86,3 @@ class MovingPlatform:
     @property
     def joint_y_id(self):
         return self._joint_y_id
-
-    def getTruePos(self):
-        return self.sensors['gps'].getTruePos()
-

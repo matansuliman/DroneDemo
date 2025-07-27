@@ -1,24 +1,90 @@
+import time
 import mujoco.viewer
+
+from models import Drone, MovingPlatform
+from controllers import QuadrotorController, MovingPlatformController
+
+from environment import ENV
+
+PAUSE_SLEEP_SEC = 0.1
+
+PATH_TO_XML = "skydio_x2/scene.xml"
 
 DISTANCE_FROM_PLATFORM = 0.01
 CAMERA_DISTANCE_MULTIPLIER = 1.3
 
 CAMERA_DISTANCE_OFFSET = 4
 
-class Orchestrator:
-    def __init__(self, env, objects):
+class basicOrchestrator:
+    def __init__(self):
 
-        self._env = env
-        self._objects = objects
+        #init environment
+        model = mujoco.MjModel.from_xml_path(PATH_TO_XML)
+        data = mujoco.MjData(model)
+        dt = model.opt.timestep
+        self._env = ENV(model, data, dt)
 
-        self._viewer = mujoco.viewer.launch_passive(env.model, env.data)
+        # Initialize objects
+        drone = Drone(self._env)
+        platform = MovingPlatform(self._env)
+        self._objects =  {
+            'viewer': mujoco.viewer.launch_passive(self._env.model, self._env.data),
+            'drone': drone,
+            'platform': platform,
+            'drone_controller': QuadrotorController(self._env, drone),
+        }
 
-        self._loop_terminated = False
-        self._loop_paused = False
-        self._drone_locked = False
+        self._loop_state = 'resume'
 
-        self._rel_endx = None
-        self._rel_endy = None
+    @property
+    def env(self):
+        return self._env
+    
+    @property
+    def objects(self):
+        return self._objects
+    
+    def ChangeLoopState(self, terminate=False, pause=False, resume=False):
+        if terminate:
+            self._loop_state = 'terminate'
+        elif pause:
+            self._loop_state = 'pause'
+        elif resume:
+            self._loop_state = 'resume'
+        else:
+            raise ValueError("Invalid loop state change request.")
+        
+    def isLoopState(self, state):
+        return self._loop_state == state
+        
+    def _step_scene(self):
+        raise NotImplementedError("Subclasses should implement this method")
+
+    def loop(self): 
+        raise NotImplementedError("Subclasses should implement this method")
+
+
+class FollowTrget:
+    def __init__(self):
+
+        #init environment
+        model = mujoco.MjModel.from_xml_path(PATH_TO_XML)
+        data = mujoco.MjData(model)
+        dt = model.opt.timestep
+        self._env = ENV(model, data, dt)
+
+        # Initialize objects
+        drone = Drone(self._env)
+        platform = MovingPlatform(self._env)
+        self._objects =  {
+            'viewer': mujoco.viewer.launch_passive(self._env.model, self._env.data),
+            'drone': drone,
+            'platform': platform,
+            'drone_controller': QuadrotorController(self._env, drone),
+            'platform_controller': MovingPlatformController(self._env, platform)
+        }
+
+        self._locked_rel_pos_xy = None
     
     @property
     def env(self):
@@ -28,77 +94,118 @@ class Orchestrator:
     def objects(self):
         return self._objects
 
-    @property
-    def loop_paused(self):
-        return self._loop_paused
-
-    def pause(self):
-        self._loop_paused = True
-
-    def resume(self):
-        self._loop_paused = False
-
-    @property
-    def loop_terminated(self):
-        return self._loop_terminated
-
-    def terminate(self):
-        self._loop_terminated = True
-
-    @property
-    def drone_locked(self):
-        return self._drone_locked
-    
-    def lock(self):
-        self._drone_locked = True
-
-    def unlock(self):
-        self._drone_locked = False
-
-
-    def mujuco_step(self):
-        mujoco.mj_step(self._env.model, self._env.data)
-
     def _drone_is_close_to_platform(self):
-        dronePos = self._objects['drone'].getTruePos()
-        platformPos = self._objects['platform'].getTruePos()
+        dronePos = self._objects['drone'].getPos(mode='no_noise')
+        platformPos = self._objects['platform'].getPos(mode='no_noise')
 
         if dronePos[2] - platformPos[2] < DISTANCE_FROM_PLATFORM:
-            self._rel_endx = dronePos[0] - platformPos[0]
-            self._rel_endy = dronePos[1] - platformPos[1]
+            self._locked_rel_pos_xy = (dronePos[0] - platformPos[0], 
+                                       dronePos[1] - platformPos[1])
             return True
-        return False 
-
-    def _lock_drone_to_platform(self):
-        self._env.data.qpos[:3] = self._objects['platform'].getTruePos()[:3] + [self._rel_endx, self._rel_endy, DISTANCE_FROM_PLATFORM]
-        self._env.data.qvel[:] = 0
-        self._env.data.qacc[:] = 0
-        self._env.data.qpos[3:7] = [1, 0, 0, 0]  # upright orientation
-
-    def update_platform(self):
+        return False
+        
+    def _step_scene(self):
+        # step platform
         self._objects['platform_controller'].step()
-
-    def update_drone(self):
-        if self.drone_locked:
-            self._lock_drone_to_platform()
+        
+        # step drone
+        if self._objects['platform_controller']._locks_activated:
+            platformPos = self._objects['platform'].getPos(mode='no_noise')
+            relPos = [self._locked_rel_pos_xy[0], self._locked_rel_pos_xy[1], DISTANCE_FROM_PLATFORM]
+            
+            self._objects['drone_controller'].update_target(mode = 'hardcode',
+                                                            data = {'qpos' : platformPos + relPos})
 
         elif self._drone_is_close_to_platform():
-            self.lock()
+            self._objects['platform_controller'].activate_locks()
         
         else:
-            self._objects['drone_controller'].update_target(self._objects['platform'].getTruePos(), 
-                                                                            self._objects['platform'].velocity)
+            self._objects['drone_controller'].update_target(mode = 'follow',
+                                                            data = {'new_target_pos' : self._objects['platform'].getPos(mode='no_noise'), 
+                                                                    'new_target_vel' : self._objects['platform'].velocity}
+                                                            )
             self._objects['drone_controller'].step()
 
-    def _update_camera_view(self):
-        dronePos = self._objects['drone'].getTruePos()
-        platformPos = self._objects['platform'].getTruePos()
+        # step camera view
+        dronePos = self._objects['drone'].getPos(mode='no_noise')
+        platformPos = self._objects['platform'].getPos(mode='no_noise')
 
-        self._viewer.cam.distance = CAMERA_DISTANCE_MULTIPLIER * abs(dronePos[2] - platformPos[2]) + CAMERA_DISTANCE_OFFSET
-        self._viewer.cam.lookat[:] = (dronePos[:3] + platformPos[:3]) / 2
+        self._objects['viewer'].cam.distance = CAMERA_DISTANCE_MULTIPLIER * abs(dronePos[2] - platformPos[2]) + CAMERA_DISTANCE_OFFSET
+        self._objects['viewer'].cam.lookat[:] = (dronePos[:3] + platformPos[:3]) / 2
 
-    def update_scene(self):
-        self.update_platform()
-        self.update_drone()
-        self._update_camera_view()
-        self._viewer.sync()
+        # sync viewer
+        self._objects['viewer'].sync()
+
+    def loop(self): 
+        while True:
+            mujoco.mj_step(self._env.model, self._env.data)
+            
+            if   self.isLoopState('terminate'): break
+            elif self.isLoopState('pause'):     time.sleep(PAUSE_SLEEP_SEC)
+            else:
+                self._step_scene()
+                time.sleep(self._env.dt)
+
+
+class Trainer(basicOrchestrator):
+
+    def __init__(self):
+        super().__init__()
+        self._t = 0.2
+        self._time = time.time()
+        self._step = 0.1
+        self._jump = [-0.3, -0.45, 1]
+        self._stop = 4
+
+        self._start = [-3, -4.5, 10]
+        self._end = [0, 0, 10]
+        self._curr = self._start.copy()
+
+    def _update_data(self):
+        if self._curr[2] == self._stop:
+            self.ChangeLoopState(terminate=True)
+            return
+
+        if time.time() - self._time > self._t:
+            self._time = time.time()
+            
+            if self._curr[1] >= self._end[1]:
+                self._start = [self._start[i] - self._jump[i] for i in range(3)]
+                self._end = [0, 0, self._end[2] - self._jump[2]]
+                self._curr = self._start.copy()
+                print("jump to next row")
+            
+            self._curr[0] += self._step
+            if self._curr[0] > self._end[0]:
+                self._curr[1] += self._step
+                self._curr[0] = self._start[0]
+
+        print(f"Current position: {self._curr[0]:.2f}, {self._curr[1]:.2f}, {self._curr[2]:.2f}", end='\r')
+
+    def _step_scene(self):
+        if self._curr == self._end:
+            self.ChangeLoopState(terminate=True)
+        
+        else:
+            self._objects['drone_controller'].update_target(mode = 'hardcode', data = {'qpos' : self._curr})
+            self._objects['drone_controller'].step()
+
+            # step camera view
+            dronePos = self._objects['drone'].getPos(mode='no_noise')
+            platformPos = self._objects['platform'].getPos(mode='no_noise')
+
+            self._objects['viewer'].cam.distance = CAMERA_DISTANCE_MULTIPLIER * abs(dronePos[2] - platformPos[2]) + CAMERA_DISTANCE_OFFSET
+            self._objects['viewer'].cam.lookat[:] = (dronePos[:3] + platformPos[:3]) / 2
+
+            # sync viewer
+            self._objects['viewer'].sync()
+
+    def loop(self):
+
+        while True:
+            mujoco.mj_step(self._env.model, self._env.data)
+            if self.isLoopState('terminate'): break
+            else: 
+                self._step_scene()
+                self._update_data()
+                time.sleep(self._env.dt)
