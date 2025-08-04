@@ -1,6 +1,8 @@
 import time
 import mujoco.viewer
 
+import numpy as np
+
 from models import Drone, MovingPlatform
 from controllers import QuadrotorController, MovingPlatformController
 
@@ -64,8 +66,9 @@ class basicOrchestrator:
         raise NotImplementedError("Subclasses should implement this method")
 
 
-class FollowTrget:
+class FollowTarget(basicOrchestrator):
     def __init__(self):
+        super().__init__()
 
         #init environment
         model = mujoco.MjModel.from_xml_path(PATH_TO_XML)
@@ -85,6 +88,8 @@ class FollowTrget:
         }
 
         self._locked_rel_pos_xy = None
+
+        self._adjust = np.array([0,0,0])
     
     @property
     def env(self):
@@ -120,8 +125,9 @@ class FollowTrget:
             self._objects['platform_controller'].activate_locks()
         
         else:
+            res = self._objects['platform'].getPos(mode='noise') + self._adjust
             self._objects['drone_controller'].update_target(mode = 'follow',
-                                                            data = {'new_target_pos' : self._objects['platform'].getPos(mode='no_noise'), 
+                                                            data = {'new_target_pos' : res, 
                                                                     'new_target_vel' : self._objects['platform'].velocity}
                                                             )
             self._objects['drone_controller'].step()

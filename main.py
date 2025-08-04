@@ -3,7 +3,7 @@ import threading
 
 
 from simulation import SimulationWrapper
-from orchestrator import Orchestrator
+from orchestrators import FollowTarget
 
 from gui import TargetControlGUI
 from streamer import CameraStreamer
@@ -35,7 +35,7 @@ def _plot():
     plot_log(orchestrator._objects['drone_controller'].log, orchestrator._objects['platform_controller'].log)
 
 if __name__ == "__main__":
-    orchestrator = Orchestrator()
+    orchestrator = FollowTarget()
     _start_simulation()
     _start_gui()
     _plot()
