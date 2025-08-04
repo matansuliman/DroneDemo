@@ -17,14 +17,17 @@ ELEVATION = -90
 
 class CameraStreamer(QObject):
     frame_ready = pyqtSignal(np.ndarray)
+    detection_ready = pyqtSignal(str)
 
-    def __init__(self, orchestrator, attached_body, update_rate =FPS):
+    def __init__(self, orchestrator, attached_body,  predictor=None, update_rate =FPS):
         super().__init__()
         self.env = orchestrator._env
         self.attached_body = attached_body
         self.orchestrator = orchestrator
         self.update_rate = update_rate
         self.running = False
+
+        self.predictor = predictor
 
         self.width = WIDTH
         self.height = HEIGHT
@@ -46,6 +49,9 @@ class CameraStreamer(QObject):
         self.running = False
 
     def _run(self):
+        if not self.running:
+            return
+    
         if not glfw.init():
             raise RuntimeError("GLFW could not be initialized")
         
@@ -78,5 +84,9 @@ class CameraStreamer(QObject):
                                   context)
             rgb_image = np.flip(rgb_buffer, axis=0)
             self.frame_ready.emit(rgb_image)
+
+            if self.predictor is not None:
+                result = self.predictor.detect(rgb_image)
+                self.detection_ready.emit(result)
 
             time.sleep(1.0 / self.update_rate)

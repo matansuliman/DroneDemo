@@ -75,7 +75,7 @@ class FollowTarget(basicOrchestrator):
         }
 
         self._locked_rel_pos_xy = None
-
+        self._predictor = None
         self._adjust = np.array([0,0,0])
     
     @property

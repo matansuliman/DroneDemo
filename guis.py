@@ -94,6 +94,10 @@ class TargetControlGUI(QtWidgets.QWidget):
         self.marker_detection_label = QtWidgets.QLabel("markers detection:")
         layout.addWidget(self.marker_detection_label)
 
+    def update_marker_detection(self, result: dict):
+        if result is not None:
+            self.marker_detection_label.setText(str(result))
+
     def update_camera_view(self, frame):
         h, w, ch = frame.shape
         bytes_per_line = ch * w

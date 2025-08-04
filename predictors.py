@@ -3,49 +3,45 @@
 from collections import deque
 import cv2
 import numpy as np
-from PyQt5.QtCore import QObject, pyqtSignal
 
-
-
-class RelPosPredictor(QObject):
-    
-    prediction_vector_ready = pyqtSignal(str)
-
-    def __init__(self, window_size=50):
-        self._last = None
+class basicDetector():
+    def __init__(self,name = "", model = None, window_size=50):
+        self._name = name
+        self._model = model
         self._history = deque(maxlen=window_size)
-        self.aruco_dict = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50)
 
-    def on_frame(self, frame: np.ndarray):
+    @property
+    def history(self):
+        return self._history
+    
+    def detect(self, frame):
+        raise NotImplementedError("Subclasses should implement this method")
+
+
+class MarkerDetector(basicDetector):
+    def __init__(self):
+        super().__init__(
+            name = "ArUco",
+            model = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50),
+        )
+
+    def detect(self, frame):
         gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-        corners, ids, _ = cv2.aruco.detectMarkers(gray, self.aruco_dict)
+        corners, ids, _ = cv2.aruco.detectMarkers(gray, self._model)
+        centers = None
+        if ids is not None:
+            centers = np.mean(corners, axis=2).squeeze()
+            self._history.append(centers)
+        print(f'mean: {self.get_mean_from_history()}', end='\r')
+        return str({"centers": centers})
 
-        if ids is None or len(ids) == 0:
-             self._last = None
-             self.prediction_vector_ready.emit("No markers detected.")
+    def is_history_empty(self):
+        return len(self._history) == 0
 
+    def get_mean_from_history(self):
+        if not self.is_history_empty():
+            return np.stack(self._history, axis=0).mean(axis=0)
         else:
-            parts = []
-            for marker_id, corner in zip(ids.flatten(), corners):
-                # compute center pixel
-                pts = corner.reshape(-1, 2)
-                cx, cy = pts.mean(axis=0)
-
-                # center
-                dx, dy = cx-159.5, cy-119.5
-                
-                
-                self._last = (dx, dy, 0)
-                self._history.append(self._last)
-
-            # join into one string
-            prediction_mean = np.mean(self._history, axis=0)
-            dx, dy, dz = prediction_mean
-            parts.append(f"Marker @ ({dx:.1f}, {dy:.1f})")
-            self.prediction_vector_ready.emit("; ".join(parts))
-
-
-    def get(self):
-        return np.mean(self._history, axis=0)
+            return 0
         
 
