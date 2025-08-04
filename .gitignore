@@ -1,4 +1,5 @@
 /__pycache__/
+/bitcraze_crazyflie_2/
 /dataset/
 /dataset_augmented/
 /CNN
