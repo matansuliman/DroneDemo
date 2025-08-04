@@ -27,14 +27,7 @@ class basicOrchestrator:
         self._env = ENV(model, data, dt)
 
         # Initialize objects
-        drone = Drone(self._env)
-        platform = MovingPlatform(self._env)
-        self._objects =  {
-            'viewer': mujoco.viewer.launch_passive(self._env.model, self._env.data),
-            'drone': drone,
-            'platform': platform,
-            'drone_controller': QuadrotorController(self._env, drone),
-        }
+        self._objects =  {}
 
         self._loop_state = 'resume'
 
@@ -69,12 +62,6 @@ class basicOrchestrator:
 class FollowTarget(basicOrchestrator):
     def __init__(self):
         super().__init__()
-
-        #init environment
-        model = mujoco.MjModel.from_xml_path(PATH_TO_XML)
-        data = mujoco.MjData(model)
-        dt = model.opt.timestep
-        self._env = ENV(model, data, dt)
 
         # Initialize objects
         drone = Drone(self._env)
