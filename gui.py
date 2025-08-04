@@ -195,6 +195,10 @@ class TargetControlGUI(QtWidgets.QWidget):
         if self.orchestrator.isLoopState('terminate'):
             self.close()
 
+    def closeEvent(self, event):
+        self.camera_streamer.stop()     # guarantee the thread halts
+        super().closeEvent(event)
+
 def launch_target_slider(drone, platform):
     app = QtWidgets.QApplication(sys.argv)
     gui = TargetControlGUI(drone, platform)
