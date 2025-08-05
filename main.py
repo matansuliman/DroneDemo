@@ -20,6 +20,7 @@ def _start_simulation():
 
 def _start_gui():
     detector = MarkerDetector()
+    orchestrator._predictor=detector
     camera_streamer = CameraStreamer(orchestrator= orchestrator,
                                     attached_body= orchestrator._objects['drone'],
                                     predictor=detector)

@@ -1,10 +1,5 @@
 import numpy as np
 
-DEFAULT_BIAS_STD = 2
-DEFAULT_DRIFT_RATE_STD = 0.001
-DEFAULT_SCALE_NOISE_STD = 0.05
-
-Z_BIAS_SCALE = 0.2
 
 class basicNoise():
     def __init__(self, env):
@@ -15,6 +10,13 @@ class basicNoise():
     
     def reset(self):
         raise NotImplementedError("Subclasses should implement this method")
+
+
+DEFAULT_BIAS_STD = 1
+DEFAULT_DRIFT_RATE_STD = 0.001
+DEFAULT_SCALE_NOISE_STD = 0.05
+
+Z_BIAS_SCALE = 0.2
 
 
 class GPSNoise(basicNoise):

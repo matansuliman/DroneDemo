@@ -1,9 +1,6 @@
 import numpy as np
 from sensors import GPS, INS
 
-XML_DRONE_NAME = 'x2'
-XML_ACCEL_SENSOR_NAME = 'body_linacc'
-XML_GYRO_SENSOR_NAME = 'body_gyro'
 
 class basicModel:
     def __init__(self, env, name, type= 'basicModel'):
@@ -25,6 +22,11 @@ class basicModel:
     
     def getPos(self, mode='noise'):
         return self.sensors['gps'].getPos(mode=mode)
+
+
+XML_DRONE_NAME = 'x2'
+XML_ACCEL_SENSOR_NAME = 'body_linacc'
+XML_GYRO_SENSOR_NAME = 'body_gyro'
 
 
 class Drone(basicModel):

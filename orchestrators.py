@@ -1,10 +1,14 @@
 import time
+
+start = time.time()
 import mujoco.viewer
 
 import numpy as np
 
 from models import Drone, MovingPlatform
 from controllers import QuadrotorController, MovingPlatformController
+
+from predictors import MarkerDetector
 
 from environment import ENV
 
@@ -112,7 +116,14 @@ class FollowTarget(basicOrchestrator):
             self._objects['platform_controller'].activate_locks()
         
         else:
-            res = self._objects['platform'].getPos(mode='noise') + self._adjust
+            if ((time.time()-start > 10) and 
+                (self._adjust == np.array([0,0,0])).all() and
+                self._predictor is not None and
+                self._predictor.is_stable()):
+                    
+                    self._adjust = np.append(self._predictor.get_mean_from_history() /29, 0)
+            
+            res = self._objects['platform'].getPos(mode='noise') - self._adjust
             self._objects['drone_controller'].update_target(mode = 'follow',
                                                             data = {'new_target_pos' : res, 
                                                                     'new_target_vel' : self._objects['platform'].velocity}

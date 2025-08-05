@@ -1,9 +1,25 @@
 import numpy as np
 from simple_pid import PID
 from scipy.spatial.transform import Rotation as R
+from sensors import FusionFilter
 
-CMD_ANGLE_LINIT = 0.03
-CMD_ANGLE_LINITS = (-CMD_ANGLE_LINIT, CMD_ANGLE_LINIT)
+
+class basicController:
+    def __init__(self, env, plant):
+        self._env = env
+        self._plant = plant
+        self._log = None
+
+    @property
+    def log(self):
+        return self._log
+    
+    def step(self):
+        raise NotImplementedError("Subclasses should implement this method")
+
+
+CMD_ANGLE_LIMIT = 0.03
+CMD_ANGLE_LIMITS = (-CMD_ANGLE_LIMIT, CMD_ANGLE_LIMIT)
 
 ANGLE_LINIT = 0.05
 ANGLE_LINITS = (-ANGLE_LINIT, ANGLE_LINIT)
@@ -20,19 +36,6 @@ VELOCITY_FF_COEF = 1.74
 LANDING_ALT_LIMITS = (-0.20, 0.10)
 LANDING_ALT_FF = 0.02
 
-class basicController:
-    def __init__(self, env, plant):
-        self._env = env
-        self._plant = plant
-        self._log = None
-
-    @property
-    def log(self):
-        return self._log
-    
-    def step(self):
-        raise NotImplementedError("Subclasses should implement this method")
-
 
 class QuadrotorController(basicController):
     def __init__(self, env, drone):
@@ -46,8 +49,8 @@ class QuadrotorController(basicController):
         }
         
         self.pids = {
-            'x': PID(Kp=0.15, Kd=0.42, setpoint=0, output_limits=CMD_ANGLE_LINITS),
-            'y': PID(Kp=0.15, Kd=0.42, setpoint=0, output_limits=CMD_ANGLE_LINITS),
+            'x': PID(Kp=0.15, Kd=0.42, setpoint=0, output_limits=CMD_ANGLE_LIMITS),
+            'y': PID(Kp=0.15, Kd=0.42, setpoint=0, output_limits=CMD_ANGLE_LIMITS),
             'z': PID(Kp=0.15, Kd=0.55, setpoint=1, output_limits=ALT_LIMITS),
             'roll': PID(Kp=0.50, Kd=0.30, setpoint=0, output_limits=ANGLE_LINITS),
             'pitch': PID(Kp=0.50, Kd=0.20, setpoint=0, output_limits=ANGLE_LINITS),
@@ -63,6 +66,13 @@ class QuadrotorController(basicController):
 
         # Initialize target position
         self._target = np.zeros(3, dtype=np.float64)
+
+        self._fusion = FusionFilter(model='complementary')
+        # Initialize fusion state from current readings
+        self._fusion.reset(
+            initial_pos= self._plant.sensors['gps'].getPos(mode='noise'),
+            initial_vel= self._plant.sensors['ins'].velocity
+        )
     
     @property
     def target(self):
@@ -94,7 +104,7 @@ class QuadrotorController(basicController):
         else:
             raise ValueError(f"Unknown mode: {mode}")
 
-    def _outer_loop(self):
+    def _outer_loop(self, fused_pos):
 
         pos = self._plant.getPos(mode='no_noise')
         noise_pos = self._plant.getPos(mode='noise')
@@ -153,10 +163,40 @@ class QuadrotorController(basicController):
         d[m['thrust3']] = throttle - roll_cmd - pitch_cmd + yaw_cmd
         d[m['thrust4']] = throttle + roll_cmd - pitch_cmd - yaw_cmd
 
+    def _ins_update(self):
+        accel_sid = self._plant.sensors['accel_sensor_id']
+        gyro_sid  = self._plant.sensors['gyro_sensor_id']
+
+        # 2) turn them into addresses in sensordata
+        adr_acc = self._env.model.sensor_adr[accel_sid]
+        adr_gyr = self._env.model.sensor_adr[gyro_sid]
+
+        # 3) slice out the three components each
+        accel_data = self._env.data.sensordata[adr_acc : adr_acc + 3]
+        gyro_data  = self._env.data.sensordata[adr_gyr : adr_gyr + 3]
+
+        #print(f"accel_data: {accel_data[0]:.5f} {accel_data[1]:.5f} {accel_data[2]:.5f}, gyro_data: {gyro_data[0]:.5f} {gyro_data[1]:.5f} {gyro_data[2]:.5f}", end='\r')
+        self._plant.sensors['ins'].update(accel_data, gyro_data) # Update INS (integrate the data)
+
     def step(self):
 
         # Log
         self._log['time'].append(self._env.getTime())
+
+        """
+        self._ins_update()
+
+        # INS integrates raw accel/gyro automatically via INS.update called externally
+        raw_ins_pos = self._plant.sensors['ins'].position
+        raw_ins_vel = self._plant.sensors['ins'].velocity
+        raw_gps_pos = self._plant.sensors['gps'].getPos(mode='noise')
+        t = self._env.getTime()
+        fused_pos, fused_vel = self._fusion.update(raw_ins_pos, raw_ins_vel, raw_gps_pos, t)
+
+        # Outer loop position control
+        throttle = self._outer_loop(fused_pos)
+
+        """
 
         # Outer loop position control
         throttle = self._outer_loop()
@@ -166,26 +206,6 @@ class QuadrotorController(basicController):
 
         # Apply control signals to actuators
         self._apply_cmds(throttle, roll_cmd, pitch_cmd, yaw_cmd)
-
-
-"""
-def _ins_update():
-    accel_data = self.env.data.sensordata[self.accel_sensor_id : self.accel_sensor_id + 3]  # Accelerometer data (x, y, z)
-    gyro_data = self.env.data.sensordata[self.gyro_sensor_id : self.gyro_sensor_id + 3]  # Gyroscope data (roll rate, pitch rate, yaw rate)
-    #with open('data.txt', 'a') as f:
-    #    f.write(f"{accel_data[0]:.5f} {accel_data[1]:.5f} {accel_data[2]:.5f} {gyro_data[0]:.5f} {gyro_data[1]:.5f} {gyro_data[2]:.5f}\n")
-    #print(f"accel_data: {accel_data[0]:.5f} {accel_data[1]:.5f} {accel_data[2]:.5f}, gyro_data: {gyro_data[0]:.5f} {gyro_data[1]:.5f} {gyro_data[2]:.5f}", end='\r')
-    self.ins.update(accel_data, gyro_data) # Update INS (integrate the data)
-
-    position = self.gps.get_true_pos()
-    print(
-        f"INS: {self.ins} ",
-        f"True position: {position[0]:.2f}, {position[1]:.2f}, {position[2]:.2f}" , 
-        f"True velocity: {self.env.data.qvel[0]:.4f}, {self.env.data.qvel[1]:.4f}, {self.env.data.qvel[2]:.4f}" , 
-        end='\r')
-
-_ins_update()
-"""
 
 
 class MovingPlatformController(basicController):
@@ -198,12 +218,10 @@ class MovingPlatformController(basicController):
             'x': [], 'y': [], 'z': []
         }
     
-        
     @property
     def locks_activated(self):
         return self._locks_activated
 
-    
     def activate_locks(self):
         self._locks_activated = True
 
