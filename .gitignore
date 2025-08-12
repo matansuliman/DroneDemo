@@ -1,4 +1,6 @@
-/__pycache__/
+**/__pycache__/
+*.py[cod]
+
 /bitcraze_crazyflie_2/
 /dataset/
 /dataset_augmented/

@@ -6,11 +6,11 @@ import pyqtgraph as pg
 
 
 class TargetControlGUI(QtWidgets.QWidget):
-    def __init__(self, orchestrator, camera_streamer):
+    def __init__(self, simulation, camera_streamer):
         
         super().__init__()
-        self.objects = orchestrator._objects
-        self.orchestrator = orchestrator
+        self.objects = simulation.orchestrator.objects
+        self.simulation = simulation
         self.landing_active = False
 
         self.camera_streamer = camera_streamer
@@ -182,13 +182,13 @@ class TargetControlGUI(QtWidgets.QWidget):
         self.z_plot.setYRange(min_z - margin, max_z + margin, padding=0)
 
     def on_pause(self):
-        self.orchestrator.ChangeLoopState(pause=True)
+        self.simulation.ChangeLoopState(pause=True)
 
     def on_resume(self):
-        self.orchestrator.ChangeLoopState(resume=True)
+        self.simulation.ChangeLoopState(resume=True)
 
     def on_terminate(self):
-        self.orchestrator.ChangeLoopState(terminate=True)
+        self.simulation.ChangeLoopState(terminate=True)
         QtCore.QTimer.singleShot(200, QtWidgets.QApplication.quit)
 
     def on_land(self):
@@ -196,7 +196,7 @@ class TargetControlGUI(QtWidgets.QWidget):
         self.land_button.setVisible(False)
 
     def check_simulation_status(self):
-        if self.orchestrator.isLoopState('terminate'):
+        if self.simulation.isLoopState('terminate'):
             self.close()
 
     def closeEvent(self, event):

@@ -19,11 +19,11 @@ class CameraStreamer(QObject):
     frame_ready = pyqtSignal(np.ndarray)
     detection_ready = pyqtSignal(str)
 
-    def __init__(self, orchestrator, attached_body,  predictor=None, update_rate =FPS):
+    def __init__(self, simulation, attached_body,  predictor=None, update_rate =FPS):
         super().__init__()
-        self.env = orchestrator._env
+        self.env = simulation.env
         self.attached_body = attached_body
-        self.orchestrator = orchestrator
+        self.simulation = simulation
         self.update_rate = update_rate
         self.running = False
 
@@ -51,7 +51,7 @@ class CameraStreamer(QObject):
     def _run(self):
         if not self.running:
             return
-    
+        
         if not glfw.init():
             raise RuntimeError("GLFW could not be initialized")
         
@@ -68,7 +68,7 @@ class CameraStreamer(QObject):
             self.cam.azimuth = AZIMUTH
             self.cam.elevation = ELEVATION
 
-            if self.orchestrator.isLoopState('pause'):
+            if self.simulation.isLoopState('pause'):
                 time.sleep(1.0 / self.update_rate)
                 continue
 

@@ -3,14 +3,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 def plot_log(drone_log, platform_log):
-    fig, axs = plt.subplots(3, 3, figsize=(15, 6))
+    fig, axs = plt.subplots(4, 3, figsize=(15, 6))
     axs = axs.flatten()
 
     xlabels = ['x', 'y', 'z',
+               'x_noise', 'y_noise', 'z_noise',
               'pitch', 'roll', 'yaw',
               'pitch_cmd', 'roll_cmd', 'yaw_cmd']
     
     ylabels = ['Centimeters', 'Centimeters', 'Centimeters',
+               'Centimeters', 'Centimeters', 'Centimeters',
                'Radians', 'Radians', 'Radians',
                'Radians', 'Radians', 'Radians']
 

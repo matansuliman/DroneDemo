@@ -1,10 +1,12 @@
-DEFAULT_DT = 0.01
+import mujoco
+
+PATH_TO_XML = "skydio_x2/scene.xml"
 
 class ENV:
-    def __init__(self, model, data, dt :float = DEFAULT_DT):
-        self._model = model
-        self._data = data
-        self._dt = dt
+    def __init__(self, path_to_xml= PATH_TO_XML):
+        self._model = mujoco.MjModel.from_xml_path(path_to_xml)
+        self._data= mujoco.MjData(self._model)
+        self._dt= self._model.opt.timestep
     
     @property
     def model(self):

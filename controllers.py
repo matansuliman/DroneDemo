@@ -1,6 +1,7 @@
 import numpy as np
 from simple_pid import PID
 from scipy.spatial.transform import Rotation as R
+
 from sensors import FusionFilter
 
 
@@ -18,14 +19,11 @@ class basicController:
         raise NotImplementedError("Subclasses should implement this method")
 
 
-CMD_ANGLE_LIMIT = 0.03
-CMD_ANGLE_LIMITS = (-CMD_ANGLE_LIMIT, CMD_ANGLE_LIMIT)
+def lower_upper_limits(x): return (-x, x)
 
-ANGLE_LINIT = 0.05
-ANGLE_LINITS = (-ANGLE_LINIT, ANGLE_LINIT)
-
-ALT_LIMIT = 0.8
-ALT_LIMITS = (-ALT_LIMIT, ALT_LIMIT)
+CMD_ANGLE_LIMITS = lower_upper_limits(0.03)
+ANGLE_LINITS = lower_upper_limits(0.05)
+ALT_LIMITS = lower_upper_limits(0.8)
 ALT_FF = 3.2495625
 
 HOVER_ALT_FF = 10
@@ -44,13 +42,14 @@ class QuadrotorController(basicController):
         self._log = {
             'time': [],
             'x': [], 'y': [], 'z': [],
+            'x_noise': [], 'y_noise': [], 'z_noise': [],
             'roll': [], 'pitch': [], 'yaw': [],
             'roll_cmd': [], 'pitch_cmd': [], 'yaw_cmd': []
         }
         
         self.pids = {
-            'x': PID(Kp=0.15, Kd=0.42, setpoint=0, output_limits=CMD_ANGLE_LIMITS),
-            'y': PID(Kp=0.15, Kd=0.42, setpoint=0, output_limits=CMD_ANGLE_LIMITS),
+            'x': PID(Kp=0.15, Kd=0.45, setpoint=0, output_limits=CMD_ANGLE_LIMITS),
+            'y': PID(Kp=0.15, Kd=0.45, setpoint=0, output_limits=CMD_ANGLE_LIMITS),
             'z': PID(Kp=0.15, Kd=0.55, setpoint=1, output_limits=ALT_LIMITS),
             'roll': PID(Kp=0.50, Kd=0.30, setpoint=0, output_limits=ANGLE_LINITS),
             'pitch': PID(Kp=0.50, Kd=0.20, setpoint=0, output_limits=ANGLE_LINITS),
@@ -104,7 +103,7 @@ class QuadrotorController(basicController):
         else:
             raise ValueError(f"Unknown mode: {mode}")
 
-    def _outer_loop(self, fused_pos):
+    def _outer_loop(self, fused_pos=None):
 
         pos = self._plant.getPos(mode='no_noise')
         noise_pos = self._plant.getPos(mode='noise')
@@ -114,6 +113,11 @@ class QuadrotorController(basicController):
         self._log['x'].append(pos[0])
         self._log['y'].append(pos[1])
         self._log['z'].append(pos[2])
+
+        
+        self._log['x_noise'].append(noise_pos[0])
+        self._log['y_noise'].append(noise_pos[1])
+        self._log['z_noise'].append(noise_pos[2])
 
         interval = self._env.dt * OUTERLOOP_RATE
         current_time = self._env.getTime()
@@ -215,7 +219,8 @@ class MovingPlatformController(basicController):
 
         self._log = {
             'time': [], 
-            'x': [], 'y': [], 'z': []
+            'x': [], 'y': [], 'z': [],
+            'x_noise': [], 'y_noise': [], 'z_noise': [],
         }
     
     @property
@@ -230,14 +235,19 @@ class MovingPlatformController(basicController):
 
     def step(self):
         # Update position based on velocity
-        curr_pos = self._plant.getPos(mode='no_noise')
-        new_pos = curr_pos + self._plant.velocity * self._env.dt
+        pos = self._plant.getPos(mode='no_noise')
+        new_pos = pos + self._plant.velocity * self._env.dt
         self._env.data.qpos[self._plant._joint_x_id] = new_pos[0]
         self._env.data.qpos[self._plant._joint_y_id] = new_pos[1]
 
-        # Logging true position
+        # Logging
         self._log['time'].append(self._env.data.time)
-        pos = self._plant.getPos(mode='no_noise')
         self._log['x'].append(pos[0])
         self._log['y'].append(pos[1])
         self._log['z'].append(pos[2])
+
+        
+        pos_noise = self._plant.getPos(mode='noise')
+        self._log['x_noise'].append(pos_noise[0])
+        self._log['y_noise'].append(pos_noise[1])
+        self._log['z_noise'].append(pos_noise[2])

@@ -1,10 +1,10 @@
 import time
-from collections import deque
 import cv2
 import numpy as np
+from collections import deque
 
 class basicDetector():
-    def __init__(self,name = "", model = None, k_sec=5):
+    def __init__(self,name = "", model = None, k_sec=15):
         self._name = name
         self._model = model
         self._history = deque(maxlen=k_sec*10)
@@ -25,13 +25,21 @@ class basicDetector():
     
     
 
-
 class MarkerDetector(basicDetector):
     def __init__(self):
         super().__init__(
             name = "ArUco",
             model = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50),
         )
+        self._final_adjust = np.array([0,0,0])
+
+    @property
+    def final_adjust(self):
+        return self._final_adjust
+    
+    @final_adjust.setter
+    def final_adjust(self, final_adjust):
+        self._final_adjust = final_adjust
 
     def _filtered_centers(self):
         now = time.time()
