@@ -1,4 +1,4 @@
-from PyQt5.QtCore import pyqtSignal, QObject
+from PySide6.QtCore import Signal, QObject
 import numpy as np
 import mujoco
 import glfw
@@ -16,8 +16,8 @@ ELEVATION = -90
 
 
 class CameraStreamer(QObject):
-    frame_ready = pyqtSignal(np.ndarray)
-    detection_ready = pyqtSignal(str)
+    frame_ready = Signal(np.ndarray)
+    detection_ready = Signal(str)
 
     def __init__(self, simulation, attached_body,  predictor=None, update_rate =FPS):
         super().__init__()
@@ -63,12 +63,12 @@ class CameraStreamer(QObject):
         context = mujoco.MjrContext(self.env.model, mujoco.mjtFontScale.mjFONTSCALE_150)
 
         while self.running:
-            self.cam.lookat[:] = self.attached_body.sensors['gps'].getPos(mode='no_noise')
+            self.cam.lookat[:] = self.attached_body.sensors['gps'].get_pos(mode='no_noise')
             self.cam.distance = DISTANCE
             self.cam.azimuth = AZIMUTH
             self.cam.elevation = ELEVATION
 
-            if self.simulation.isLoopState('pause'):
+            if self.simulation.is_loop_state('pause'):
                 time.sleep(1.0 / self.update_rate)
                 continue
 

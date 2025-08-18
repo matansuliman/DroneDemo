@@ -5,7 +5,7 @@ from scipy.spatial.transform import Rotation as R
 from sensors import FusionFilter
 
 
-class basicController:
+class BasicController:
     def __init__(self, env, plant):
         self._env = env
         self._plant = plant
@@ -23,7 +23,7 @@ class basicController:
         raise NotImplementedError("Subclasses should implement this method")
 
 
-def lower_upper_limits(x): return (-x, x)
+def lower_upper_limits(x): return -x, x
 
 CMD_ANGLE_LIMITS = lower_upper_limits(0.03)
 ANGLE_LINITS = lower_upper_limits(0.05)
@@ -39,7 +39,7 @@ LANDING_ALT_LIMITS = (-0.20, 0.10)
 LANDING_ALT_FF = 0.02
 
 
-class QuadrotorController(basicController):
+class QuadrotorController(BasicController):
     def __init__(self, env, drone):
         super().__init__(env, drone)
 
@@ -75,7 +75,7 @@ class QuadrotorController(basicController):
         return self._target
 
     def error_xy_from_target(self):
-        return self._target[:2] - np.array(self._plant.getPos(mode='no_noise'))[:2]
+        return self._target[:2] - np.array(self._plant.get_pos(mode='no_noise'))[:2]
 
     def update_target(self, mode, data=None):
         if mode == 'hardcode':
@@ -103,8 +103,8 @@ class QuadrotorController(basicController):
 
     def _outer_loop(self, fused_pos=None):
 
-        pos = self._plant.getPos(mode='no_noise')
-        noise_pos = self._plant.getPos(mode='noise')
+        pos = self._plant.get_pos(mode='no_noise')
+        noise_pos = self._plant.get_pos(mode='noise')
         noise_pos = pos
 
         # Log
@@ -190,7 +190,7 @@ class QuadrotorController(basicController):
         # INS integrates raw accel/gyro automatically via INS.update called externally
         raw_ins_pos = self._plant.sensors['ins'].position
         raw_ins_vel = self._plant.sensors['ins'].velocity
-        raw_gps_pos = self._plant.sensors['gps'].getPos(mode='noise')
+        raw_gps_pos = self._plant.sensors['gps'].get_pos(mode='noise')
         t = self._env.getTime()
         fused_pos, fused_vel = self._fusion.update(raw_ins_pos, raw_ins_vel, raw_gps_pos, t)
 
@@ -209,7 +209,7 @@ class QuadrotorController(basicController):
         self._apply_cmds(throttle, roll_cmd, pitch_cmd, yaw_cmd)
 
 
-class MovingPlatformController(basicController):
+class MovingPlatformController(BasicController):
     def __init__(self, env, platform):
         super().__init__(env, platform)
         self._locks_activated = False
@@ -232,10 +232,10 @@ class MovingPlatformController(basicController):
 
     def step(self):
         # Update position based on velocity
-        pos = self._plant.getPos(mode='no_noise')
+        pos = self._plant.get_pos(mode='no_noise')
         new_pos = pos + self._plant.velocity * self._env.dt
-        self._env.data.qpos[self._plant._joint_x_id] = new_pos[0]
-        self._env.data.qpos[self._plant._joint_y_id] = new_pos[1]
+        self._env.data.qpos[self._plant.joint_x_id] = new_pos[0]
+        self._env.data.qpos[self._plant.joint_y_id] = new_pos[1]
 
         # Logging
         self._log['time'].append(self._env.data.time)
@@ -244,7 +244,7 @@ class MovingPlatformController(basicController):
         self._log['z'].append(pos[2])
 
         
-        pos_noise = self._plant.getPos(mode='noise')
+        pos_noise = self._plant.get_pos(mode='noise')
         self._log['x_noise'].append(pos_noise[0])
         self._log['y_noise'].append(pos_noise[1])
         self._log['z_noise'].append(pos_noise[2])

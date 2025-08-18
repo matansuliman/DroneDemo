@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 from collections import deque
 
-class basicDetector():
+class BasicDetector:
     def __init__(self,name = "", model = None, k_sec=15):
         self._name = name
         self._model = model
@@ -25,7 +25,7 @@ class basicDetector():
     
     
 
-class MarkerDetector(basicDetector):
+class MarkerDetector(BasicDetector):
     def __init__(self):
         super().__init__(
             name = "ArUco",

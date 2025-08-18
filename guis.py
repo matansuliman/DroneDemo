@@ -1,16 +1,12 @@
 import sys
 import numpy as np
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtGui import QImage, QPixmap
+from PySide6 import QtWidgets, QtCore
+from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtWidgets import QApplication, QWidget, QGroupBox, QVBoxLayout, QHBoxLayout, QLabel, QDoubleSpinBox
 import pyqtgraph as pg
 
-from PyQt5.QtWidgets import (
-    QWidget, QGroupBox, QVBoxLayout, QHBoxLayout,
-    QLabel, QDoubleSpinBox
-)
 
-
-class TargetControlGUI(QtWidgets.QWidget):
+class TargetControlGUI(QWidget):
     def __init__(self, simulation, camera_streamer):
         super().__init__()
         self.env = simulation.orchestrator.env
@@ -189,7 +185,7 @@ class TargetControlGUI(QtWidgets.QWidget):
 
     def update_target(self):
         if self.objects['drone_controller'].log['x']:
-            pos = self.objects['drone'].getPos(mode='no_noise')
+            pos = self.objects['drone'].get_pos(mode='no_noise')
             self.pos_label.setText(f"Current Position: ({pos[0]:.2f}, {pos[1]:.2f}, {pos[2]:.2f})")
             self.xy_current_dot.setData([{'pos': [pos[0], pos[1]]}])
             self.z_current_line.setValue(pos[2])
@@ -207,10 +203,10 @@ class TargetControlGUI(QtWidgets.QWidget):
             if self.landing_active:
                 self.objects['drone_controller'].update_target(mode='landing')
         else:
-            pos = self.objects['drone'].getPos(mode='no_noise')
+            pos = self.objects['drone'].get_pos(mode='no_noise')
 
         # Platform visuals
-        px, py, pz = self.objects['platform'].getPos(mode='no_noise')
+        px, py, pz = self.objects['platform'].get_pos(mode='no_noise')
         self.xy_platform_dot.setData([{'pos': [px, py]}])
         self.z_platform_line.setValue(pz)
 
@@ -230,32 +226,32 @@ class TargetControlGUI(QtWidgets.QWidget):
 
     # ---- Pause/Resume toggle ----
     def toggle_pause_resume(self):
-        if self.simulation.isLoopState('pause'):
-            self.simulation.setLoopState(resume=True)
+        if self.simulation.is_loop_state('pause'):
+            self.simulation.set_loop_state(resume=True)
             self.pause_btn.setText("Pause")
             self.is_paused = False
         else:
-            self.simulation.setLoopState(pause=True)
+            self.simulation.set_loop_state(pause=True)
             self.pause_btn.setText("Resume")
             self.is_paused = True
 
     def _sync_pause_button_label(self):
-        paused = self.simulation.isLoopState('pause')
+        paused = self.simulation.is_loop_state('pause')
         if paused != self.is_paused:
             self.is_paused = paused
             self.pause_btn.setText("Resume" if paused else "Pause")
 
     # ---- Other controls ----
     def on_terminate(self):
-        self.simulation.setLoopState(terminate=True)
-        QtCore.QTimer.singleShot(200, QtWidgets.QApplication.quit)
+        self.simulation.set_loop_state(terminate=True)
+        QtCore.QTimer.singleShot(200, QApplication.quit)
 
     def on_land(self):
         self.landing_active = True
         self.land_button.setEnabled(False)
 
     def check_simulation_status(self):
-        if self.simulation.isLoopState('terminate'):
+        if self.simulation.is_loop_state('terminate'):
             self.close()
 
     def closeEvent(self, event):
@@ -270,7 +266,7 @@ class TargetControlGUI(QtWidgets.QWidget):
 
 
 def launch_target_slider(drone, platform):
-    app = QtWidgets.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     gui = TargetControlGUI(drone, platform)
     gui.show()
     sys.exit(app.exec_())

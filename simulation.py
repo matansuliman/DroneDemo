@@ -1,16 +1,15 @@
 import time
 
-from orchestrators import basicOrchestrator
+from orchestrators import BasicOrchestrator, FollowTarget
 
-
-class basicSimulationRunner():
+class BasicSimulationRunner:
     """Owns the simulation loop lifecycle (thread target).
 
     Keeps threading and loop orchestration out of app.py.
     """
-    def __init__(self, orchestrator= basicOrchestrator(), loop_state= 'resume'):
+    def __init__(self, orchestrator= BasicOrchestrator, loop_state= 'resume'):
         
-        self._orchestrator = orchestrator
+        self._orchestrator = orchestrator()
         self._env = self._orchestrator.env
         self._loop_state = loop_state
         
@@ -26,7 +25,7 @@ class basicSimulationRunner():
     def loop_state(self):
         return self._loop_state
     
-    def setLoopState(self, terminate=False, pause=False, resume=False):
+    def set_loop_state(self, terminate=False, pause=False, resume=False):
         if terminate:
             self._loop_state = 'terminate'
         elif pause:
@@ -36,26 +35,26 @@ class basicSimulationRunner():
         else:
             raise ValueError("Invalid loop state change request.")
         
-    def isLoopState(self, state):
+    def is_loop_state(self, state):
         return self._loop_state == state
-    
+
     def run(self):
         raise NotImplementedError("Subclasses should implement this method")
 
 
 PAUSE_SLEEP_SEC = 0.1
 
-class SimulationRunner(basicSimulationRunner):
-    def __init__(self, orchestrator):
+class SimulationRunner(BasicSimulationRunner):
+    def __init__(self, orchestrator= BasicOrchestrator, loop_state= 'resume'):
         super().__init__(
             orchestrator= orchestrator,
-            loop_state= 'resume'
+            loop_state= loop_state
             )
 
     def run(self):
         while True:
-            if self.isLoopState('terminate'): break
-            if self.isLoopState('pause'):
+            if self.is_loop_state('terminate'): break
+            if self.is_loop_state('pause'):
                 time.sleep(PAUSE_SLEEP_SEC)
                 continue
             

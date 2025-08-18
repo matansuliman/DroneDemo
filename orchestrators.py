@@ -6,9 +6,10 @@ import numpy as np
 from models import Drone, MovingPlatform
 from controllers import QuadrotorController, MovingPlatformController
 from environment import ENV
+from predictors import MarkerDetector
 
 
-class basicOrchestrator:
+class BasicOrchestrator:
     def __init__(self):
         self._env = ENV()
         self._objects =  {} # {name: object} 
@@ -25,15 +26,12 @@ class basicOrchestrator:
         raise NotImplementedError("Subclasses should implement this method")
 
 COOL_OFF_TIME = 10
-
 DISTANCE_FROM_PLATFORM = 0.01
 CAMERA_DISTANCE_MULTIPLIER = 1.3
-
 CAMERA_DISTANCE_OFFSET = 4
-
 PIXEL_TO_METER = 1/29
 
-class FollowTarget(basicOrchestrator):
+class FollowTarget(BasicOrchestrator):
     def init_env(self):
         self._env.enable_wind(True)
         self._env.set_wind(velocity_world=[0, 0, 0], air_density=1.225)
@@ -55,18 +53,16 @@ class FollowTarget(basicOrchestrator):
             'platform_controller': MovingPlatformController(self._env, platform)
         }
 
-    def init_params(self):
-        self._locked_rel_pos_xy = None
-        self._predictor = None
-        self._adjust = np.array([0,0,0])
-        self._target_adjusted = False
-        self._start_time = time.time()
-
     def __init__(self):
         super().__init__()
         self.init_env()
         self.init_object()
-        self.init_params()
+
+        self._locked_rel_pos_xy = None
+        self._predictor = MarkerDetector()
+        self._adjust = np.array([0,0,0])
+        self._target_adjusted = False
+        self._start_time = time.time()
         
     
     @property
@@ -82,12 +78,12 @@ class FollowTarget(basicOrchestrator):
         return self._target_adjusted
 
     def _drone_is_close_to_platform(self):
-        dronePos = self._objects['drone'].getPos(mode='no_noise')
-        platformPos = self._objects['platform'].getPos(mode='no_noise')
+        drone_pos = self._objects['drone'].get_pos(mode='no_noise')
+        platform_pos = self._objects['platform'].get_pos(mode='no_noise')
 
-        if dronePos[2] - platformPos[2] < DISTANCE_FROM_PLATFORM:
-            self._locked_rel_pos_xy = (dronePos[0] - platformPos[0], 
-                                       dronePos[1] - platformPos[1])
+        if drone_pos[2] - platform_pos[2] < DISTANCE_FROM_PLATFORM:
+            self._locked_rel_pos_xy = (drone_pos[0] - platform_pos[0],
+                                       drone_pos[1] - platform_pos[1])
             return True
         return False
         
@@ -96,12 +92,12 @@ class FollowTarget(basicOrchestrator):
         self._objects['platform_controller'].step()
         
         # step drone
-        if self._objects['platform_controller']._locks_activated:
-            platformPos = self._objects['platform'].getPos(mode='no_noise')
-            relPos = [self._locked_rel_pos_xy[0], self._locked_rel_pos_xy[1], DISTANCE_FROM_PLATFORM]
+        if self._objects['platform_controller'].locks_activated:
+            platform_pos = self._objects['platform'].get_pos(mode='no_noise')
+            rel_pos = [self._locked_rel_pos_xy[0], self._locked_rel_pos_xy[1], DISTANCE_FROM_PLATFORM]
             
             self._objects['drone_controller'].update_target(mode = 'hardcode',
-                                                            data = {'qpos' : platformPos + relPos})
+                                                            data = {'qpos' : platform_pos + rel_pos})
 
         elif self._drone_is_close_to_platform():
             self._objects['platform_controller'].activate_locks()
@@ -115,7 +111,7 @@ class FollowTarget(basicOrchestrator):
                     self._adjust = np.append(self._predictor.get_mean_from_history() * PIXEL_TO_METER, 0)
                     self._target_adjusted = True
             
-            res = self._objects['platform'].getPos(mode='noise') - self._adjust
+            res = self._objects['platform'].get_pos(mode='noise') - self._adjust
             self._objects['drone_controller'].update_target(mode = 'follow',
                                                             data = {'new_target_pos' : res, 
                                                                     'new_target_vel' : self._objects['platform'].velocity}
@@ -123,11 +119,11 @@ class FollowTarget(basicOrchestrator):
             self._objects['drone_controller'].step()
 
         # step camera view
-        dronePos = self._objects['drone'].getPos(mode='no_noise')
-        platformPos = self._objects['platform'].getPos(mode='no_noise')
+        drone_pos = self._objects['drone'].get_pos(mode='no_noise')
+        platform_pos = self._objects['platform'].get_pos(mode='no_noise')
 
-        self._objects['viewer'].cam.distance = CAMERA_DISTANCE_MULTIPLIER * abs(dronePos[2] - platformPos[2]) + CAMERA_DISTANCE_OFFSET
-        self._objects['viewer'].cam.lookat[:] = (dronePos[:3] + platformPos[:3]) / 2
+        self._objects['viewer'].cam.distance = CAMERA_DISTANCE_MULTIPLIER * abs(drone_pos[2] - platform_pos[2]) + CAMERA_DISTANCE_OFFSET
+        self._objects['viewer'].cam.lookat[:] = (drone_pos[:3] + platform_pos[:3]) / 2
 
         # sync viewer
         self._objects['viewer'].sync()

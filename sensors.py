@@ -3,41 +3,41 @@ from scipy.spatial.transform import Rotation as R
 
 from noises import GPSNoise
 
-class basicSensor():
-    def __init__(self, env, bodyId: int):
+class BasicSensor():
+    def __init__(self, env, body_id: int):
         self._env = env
-        self._bodyId = bodyId
+        self._body_id = body_id
     
     @property
-    def bodyId(self):
-        return self._bodyId
+    def body_id(self):
+        return self._body_id
     
-    def getPos(self, mode='noise'):
+    def get_pos(self, mode='noise'):
         raise NotImplementedError("Subclasses should implement this method")
 
 
-class GPS(basicSensor):
-    def __init__(self, env, bodyId: int):
-        super().__init__(env, bodyId)
+class GPS(BasicSensor):
+    def __init__(self, env, body_id: int):
+        super().__init__(env, body_id)
         self._noise = GPSNoise(self._env) # Initialize GPS noise model
 
-    def getPos(self, mode='noise'):
+    def get_pos(self, mode='noise'):
         if mode == 'noise':
             offset, scale = self._noise.step()
-            return (self.getPos(mode='no_noise') + offset) * scale
+            return (self.get_pos(mode='no_noise') + offset) * scale
         
         elif mode == 'no_noise':
-            return self._env.world_pos_of_body(self._bodyId)
+            return self._env.world_pos_of_body(self._body_id)
         
         else:
             raise ValueError(f"Unknown mode: {mode}")
         
     
-class INS(basicSensor):
-    def __init__(self, env, bodyId: int):
-        super().__init__(env, bodyId)
+class INS(BasicSensor):
+    def __init__(self, env, body_id: int):
+        super().__init__(env, body_id)
         # Initialize position, velocity, and orientation
-        self._position = self._env.world_pos_of_body(self._bodyId)  # Initial position
+        self._position = self._env.world_pos_of_body(self._body_id)  # Initial position
         self._velocity = np.array([0.0, 0.0, 0.0])  # Initial velocity
         self._orientation = np.array([0.0, 0.0, 0.0])  # Euler angles (roll, pitch, yaw)
 
