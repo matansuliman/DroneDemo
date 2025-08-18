@@ -9,11 +9,15 @@ class basicController:
     def __init__(self, env, plant):
         self._env = env
         self._plant = plant
-        self._log = None
+        self._log = {}
 
     @property
     def log(self):
         return self._log
+    
+    def clear_log(self):
+        for key in self._log.keys():
+            self._log[key] = [] 
     
     def step(self):
         raise NotImplementedError("Subclasses should implement this method")
@@ -65,24 +69,18 @@ class QuadrotorController(basicController):
 
         # Initialize target position
         self._target = np.zeros(3, dtype=np.float64)
-
-        self._fusion = FusionFilter(model='complementary')
-        # Initialize fusion state from current readings
-        self._fusion.reset(
-            initial_pos= self._plant.sensors['gps'].getPos(mode='noise'),
-            initial_vel= self._plant.sensors['ins'].velocity
-        )
     
     @property
     def target(self):
         return self._target
 
+    def error_xy_from_target(self):
+        return self._target[:2] - np.array(self._plant.getPos(mode='no_noise'))[:2]
+
     def update_target(self, mode, data=None):
         if mode == 'hardcode':
-            self._env.data.qpos[:3] = data['qpos']
-            self._env.data.qvel[:] = 0
-            self._env.data.qacc[:] = 0
-            self._env.data.qpos[3:7] = [1, 0, 0, 0]  # upright orientation
+            self._env.set_free_body_pose('x2', pos_world=data['qpos'], quat_wxyz=[1, 0, 0, 0])
+            self._env.set_free_body_velocity('x2', linvel_world=[0, 0, 0], angvel_world=[0, 0, 0])
         
         elif mode == 'follow': # Drone target follows the platform + 0.5m in Z
             self._target = data['new_target_pos'].copy() 
@@ -157,15 +155,14 @@ class QuadrotorController(basicController):
         return roll_cmd, pitch_cmd, yaw_cmd
     
     def _apply_cmds(self, throttle, roll_cmd, pitch_cmd, yaw_cmd):
-
-        d = self._env.data.ctrl
-        m = self._plant.motorMap
-
         # Motor Mixing Algorithem (MMA): Combine control signals to actuators
-        d[m['thrust1']] = throttle + roll_cmd + pitch_cmd + yaw_cmd
-        d[m['thrust2']] = throttle - roll_cmd + pitch_cmd - yaw_cmd
-        d[m['thrust3']] = throttle - roll_cmd - pitch_cmd + yaw_cmd
-        d[m['thrust4']] = throttle + roll_cmd - pitch_cmd - yaw_cmd
+        values = {
+            'thrust1': throttle + roll_cmd + pitch_cmd + yaw_cmd,
+            'thrust2': throttle - roll_cmd + pitch_cmd - yaw_cmd,
+            'thrust3': throttle - roll_cmd - pitch_cmd + yaw_cmd,
+            'thrust4': throttle + roll_cmd - pitch_cmd - yaw_cmd,
+        }
+        self._env.set_ctrls(values)
 
     def _ins_update(self):
         accel_sid = self._plant.sensors['accel_sensor_id']

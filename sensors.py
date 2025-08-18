@@ -27,7 +27,7 @@ class GPS(basicSensor):
             return (self.getPos(mode='no_noise') + offset) * scale
         
         elif mode == 'no_noise':
-            return self._env.data.xpos[self._bodyId]
+            return self._env.world_pos_of_body(self._bodyId)
         
         else:
             raise ValueError(f"Unknown mode: {mode}")
@@ -37,7 +37,7 @@ class INS(basicSensor):
     def __init__(self, env, bodyId: int):
         super().__init__(env, bodyId)
         # Initialize position, velocity, and orientation
-        self._position = self._env.data.xpos[self._bodyId]  # Initial position
+        self._position = self._env.world_pos_of_body(self._bodyId)  # Initial position
         self._velocity = np.array([0.0, 0.0, 0.0])  # Initial velocity
         self._orientation = np.array([0.0, 0.0, 0.0])  # Euler angles (roll, pitch, yaw)
 

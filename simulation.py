@@ -1,5 +1,4 @@
 import time
-import mujoco
 
 from orchestrators import basicOrchestrator
 
@@ -27,11 +26,18 @@ class basicSimulationRunner():
     def loop_state(self):
         return self._loop_state
     
-    def ChangeLoopState(self, terminate=False, pause=False, resume=False):
-        raise NotImplementedError("Subclasses should implement this method")
-    
+    def setLoopState(self, terminate=False, pause=False, resume=False):
+        if terminate:
+            self._loop_state = 'terminate'
+        elif pause:
+            self._loop_state = 'pause'
+        elif resume:
+            self._loop_state = 'resume'
+        else:
+            raise ValueError("Invalid loop state change request.")
+        
     def isLoopState(self, state):
-        raise NotImplementedError("Subclasses should implement this method")
+        return self._loop_state == state
     
     def run(self):
         raise NotImplementedError("Subclasses should implement this method")
@@ -45,26 +51,14 @@ class SimulationRunner(basicSimulationRunner):
             orchestrator= orchestrator,
             loop_state= 'resume'
             )
-    
-    def ChangeLoopState(self, terminate=False, pause=False, resume=False):
-        if terminate:
-            self._loop_state = 'terminate'
-        elif pause:
-            self._loop_state = 'pause'
-        elif resume:
-            self._loop_state = 'resume'
-        else:
-            raise ValueError("Invalid loop state change request.")
-        
-    def isLoopState(self, state):
-        return self._loop_state == state
 
     def run(self):
         while True:
-            mujoco.mj_step(self._env.model, self._env.data)
+            if self.isLoopState('terminate'): break
+            if self.isLoopState('pause'):
+                time.sleep(PAUSE_SLEEP_SEC)
+                continue
             
-            if   self.isLoopState('terminate'): break
-            elif self.isLoopState('pause'):     time.sleep(PAUSE_SLEEP_SEC)
-            else:
-                self._orchestrator.step_scene()
-                time.sleep(self._env.dt)
+            self._orchestrator.step_scene() # compute scene logic & write controls
+            self._env.step()                # advance physics with our effects (wind/drag etc.)
+            time.sleep(self._env.dt)        # keep real-time pacing

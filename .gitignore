@@ -5,3 +5,6 @@
 /dataset/
 /dataset_augmented/
 /CNN/
+
+venv/
+.venv/

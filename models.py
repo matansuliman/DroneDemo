@@ -7,7 +7,7 @@ class basicModel:
     def __init__(self, env, name, type= 'basicModel'):
         self._env = env
         self._type = type
-        self._bodyId = next(i for i in range(env.model.nbody) if env.model.body(i).name == name)
+        self._bodyId = self._bodyId = env.body_id(name)
 
     @property
     def type(self):
@@ -36,24 +36,13 @@ class Drone(basicModel):
         self._sensors = {
             'gps': GPS(self._env, self._bodyId),
             'ins': INS(self._env, self._bodyId),
-            'accel_sensor_id': next(i for i in range(self._env.model.nsensor) if self._env.model.sensor(i).name == XML_ACCEL_SENSOR_NAME),
-            'gyro_sensor_id': next(i for i in range(self._env.model.nsensor) if self._env.model.sensor(i).name == XML_GYRO_SENSOR_NAME)
+            'accel_sensor_id': self._env.sensor_id(XML_ACCEL_SENSOR_NAME),
+            'gyro_sensor_id':  self._env.sensor_id(XML_GYRO_SENSOR_NAME),
         }
-
-        # Map motor actuator names to indices
-        _motor_names = [self._env.model.actuator(i).name for i in range(self._env.model.nu)]
-        self._motorMap = {name: i for i, name in enumerate(_motor_names)}
     
     @property
     def sensors(self):
         return self._sensors
-    
-    @property
-    def motorMap(self):
-        return self._motorMap
-
-
-
 
 
 XML_PLATFORM_NAME = 'platform'

@@ -24,6 +24,7 @@ class basicOrchestrator:
     def step_scene(self):
         raise NotImplementedError("Subclasses should implement this method")
 
+COOL_OFF_TIME = 10
 
 DISTANCE_FROM_PLATFORM = 0.01
 CAMERA_DISTANCE_MULTIPLIER = 1.3
@@ -33,9 +34,16 @@ CAMERA_DISTANCE_OFFSET = 4
 PIXEL_TO_METER = 1/29
 
 class FollowTarget(basicOrchestrator):
-    def __init__(self):
-        super().__init__()
+    def init_env(self):
+        self._env.enable_wind(True)
+        self._env.set_wind(velocity_world=[0, 0, 0], air_density=1.225)
 
+        # Quadratic drag coefficient*area (Cd*A) per body (rough guesses you can tune)
+        # Larger value => more drag. Start small to avoid destabilizing.
+        self._env.set_body_cda('x2', 0.04)
+        self._env.set_body_cda('platform', 0.25)
+
+    def init_object(self):
         # Initialize objects
         drone = Drone(self._env)
         platform = MovingPlatform(self._env)
@@ -47,10 +55,19 @@ class FollowTarget(basicOrchestrator):
             'platform_controller': MovingPlatformController(self._env, platform)
         }
 
+    def init_params(self):
         self._locked_rel_pos_xy = None
         self._predictor = None
         self._adjust = np.array([0,0,0])
+        self._target_adjusted = False
         self._start_time = time.time()
+
+    def __init__(self):
+        super().__init__()
+        self.init_env()
+        self.init_object()
+        self.init_params()
+        
     
     @property
     def predictor(self):
@@ -59,6 +76,10 @@ class FollowTarget(basicOrchestrator):
     @predictor.setter
     def predictor(self, predictor):
         self._predictor = predictor
+
+    @property
+    def target_adjusted(self):
+        return self._target_adjusted
 
     def _drone_is_close_to_platform(self):
         dronePos = self._objects['drone'].getPos(mode='no_noise')
@@ -86,12 +107,13 @@ class FollowTarget(basicOrchestrator):
             self._objects['platform_controller'].activate_locks()
         
         else:
-            if ((time.time() - self._start_time > 10) and 
-                (self._adjust == np.array([0,0,0])).all() and
+            if ((time.time() - self._start_time > COOL_OFF_TIME) and 
+                not self._target_adjusted and
                 self._predictor is not None and
                 self._predictor.is_stable()):
                     
                     self._adjust = np.append(self._predictor.get_mean_from_history() * PIXEL_TO_METER, 0)
+                    self._target_adjusted = True
             
             res = self._objects['platform'].getPos(mode='noise') - self._adjust
             self._objects['drone_controller'].update_target(mode = 'follow',

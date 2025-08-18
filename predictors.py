@@ -78,12 +78,14 @@ class MarkerDetector(basicDetector):
         std_k_sec  = self.get_std_from_history()
         
         if mean_k_sec is not None:
-            return f'mean (5s) = {mean_k_sec}, std (5s) = {std_k_sec}, stable: {str(self.is_stable())}'
+            return f'std ({self._k_sec}s) = {std_k_sec}, stable for {self._k_sec}s: {str(self.is_stable())}'
         else: 
             return ""
     
 
     def is_stable(self):
         std_k_sec  = self.get_std_from_history()
+        if std_k_sec is None:
+            return False
         return sum(std_k_sec) <= 2
         
