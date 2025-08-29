@@ -7,7 +7,7 @@ class BasicModel:
     def __init__(self, info: str ='', env= None, xml_name= ''):
         self._info = info
         self._env = env
-        self._body_id = self._body_id = env.body_id(xml_name)
+        self._body_id = env.body_id(xml_name)
         self._sensors = None
 
     @property

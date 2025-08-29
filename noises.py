@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class basicNoise():
+class BasicNoise:
     def __init__(self, env):
         self._env = env
 
@@ -19,7 +19,7 @@ DEFAULT_SCALE_NOISE_STD = 0
 Z_BIAS_SCALE = 0
 
 
-class GPSNoise(basicNoise):
+class GPSNoise(BasicNoise):
     """
     GPSNoiseModel simulates GPS noise with:
     - static bias (fixed offset)

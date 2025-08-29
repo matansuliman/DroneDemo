@@ -100,7 +100,8 @@ class QuadrotorController(BasicController):
             self._env.set_free_body_pose('x2', pos_world=data['qpos'], quat_wxyz=[1, 0, 0, 0])
             self._env.set_free_body_velocity('x2', linvel_world=[0, 0, 0], angvel_world=[0, 0, 0])
         
-        elif mode == 'follow': # Drone target follows the platform + 0.5m in Z
+        elif mode == 'follow':
+            # Drone target is the platform
             self._target = data['new_target_pos'].copy() 
 
             # Feedforward terms
@@ -118,7 +119,7 @@ class QuadrotorController(BasicController):
 
         pos = self._plant.get_pos(mode='no_noise')
         noise_pos = self._plant.get_pos(mode='noise')
-        noise_pos = pos
+        noise_pos = pos # cancel noise
 
         # Log
         self._log['x'].append(pos[0])
@@ -168,7 +169,7 @@ class QuadrotorController(BasicController):
         return roll_cmd, pitch_cmd, yaw_cmd
     
     def _apply_cmds(self, throttle, roll_cmd, pitch_cmd, yaw_cmd):
-        # Motor Mixing Algorithem (MMA): Combine control signals to actuators
+        # Motor Mixing Algorithm (MMA): Combine control signals to actuators
         values = {
             'thrust1': throttle + roll_cmd + pitch_cmd + yaw_cmd,
             'thrust2': throttle - roll_cmd + pitch_cmd - yaw_cmd,

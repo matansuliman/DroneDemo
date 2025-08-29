@@ -10,8 +10,6 @@ class BasicSimulationRunner:
         self._orchestrator = orchestrator()
         self._env = self._orchestrator.env
         self._loop_state = loop_state
-        print(print)
-
         print(self)
 
     @property
