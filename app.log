@@ -1,17 +1,12 @@
-[2025-08-29 20:09:57.669750] <function <lambda> at 0x000001AE7975B560>
-[2025-08-29 20:09:57.669750] simulation (SimulationRunner) info: runs mujoco
+[2025-08-29 21:29:54.490964] simulation (SimulationRunner) info: runs mujoco
 	orchestrator (Follow) info: drone follow platform, objects:
-		<mujoco.viewer.Handle object at 0x000001AE0EC91250>
+		<mujoco.viewer.Handle object at 0x000002E3A2B94B90>
 		model (Quadrotor) info: quadrotor
 		model (MovingPlatform) info: moving_platform
 		model (QuadrotorController) info: QuadrotorController
 		model (MovingPlatformController) info: QuadrotorController
-[2025-08-29 20:09:57.697991] App: Starting
-[2025-08-29 20:09:57.697991] App: Running
-[2025-08-29 20:09:59.239553] GUI: platform velocity = 0.90, 0.00, 0.00
-[2025-08-29 20:09:59.530188] GUI: platform velocity = 0.90, -0.90, 0.00
-[2025-08-29 20:10:00.260788] GUI: wind = -1.60, 0.00, 0.0
-[2025-08-29 20:10:00.603915] GUI: wind = -1.60, 0.80, 0.0
-[2025-08-29 20:10:01.121925] GUI: terminate
-[2025-08-29 20:10:01.348235] App: Plotting
-[2025-08-29 20:10:02.634234] App: Exiting
+[2025-08-29 21:29:54.525689] App: Starting
+[2025-08-29 21:29:54.525689] App: Running
+[2025-08-29 21:29:56.058368] GUI: pressed terminate
+[2025-08-29 21:29:56.318592] App: Plotting
+[2025-08-29 21:29:58.030080] App: Exiting

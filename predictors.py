@@ -43,10 +43,7 @@ class BasicDetector:
 
 class MarkerDetector(BasicDetector):
     def __init__(self):
-        super().__init__(
-            info = "ArUco",
-            model = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50),
-        )
+        super().__init__(info = "ArUco",model = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50))
 
     def _filtered_centers(self):
         now = time.time()

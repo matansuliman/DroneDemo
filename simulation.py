@@ -52,19 +52,13 @@ import threading
 
 class SimulationRunner(BasicSimulationRunner):
     def __init__(self, info: str= 'runs mujoco', orchestrator= BasicOrchestrator, loop_state= 'resume'):
-        super().__init__(
-            info = info,
-            orchestrator= orchestrator,
-            loop_state= loop_state
-            )
+        super().__init__(info = info, orchestrator= orchestrator, loop_state= loop_state )
         self._pause_event = threading.Event()
 
     def set_loop_state(self, terminate=False, pause=False, resume=False):
         super().set_loop_state(terminate=terminate, pause=pause, resume=resume)
-        if pause:
-            self._pause_event.clear()
-        elif resume:
-            self._pause_event.set()
+        if pause: self._pause_event.clear()
+        elif resume: self._pause_event.set()
 
     def run(self):
         while True:

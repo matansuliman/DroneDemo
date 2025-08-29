@@ -1,9 +1,8 @@
-# guis.py — minimal control panel
-import sys
 import numpy as np
 from PySide6 import QtWidgets, QtCore
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QApplication, QWidget
+
 
 class GUI(QWidget):
     def __init__(self, simulation, camera_streamer):

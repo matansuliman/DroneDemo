@@ -3,7 +3,6 @@ import builtins
 import datetime
 import threading
 from PySide6.QtWidgets import QApplication
-import logging
 
 # init logger file and print function
 built_in_print = builtins.print
@@ -26,10 +25,6 @@ class App:
         self._simulation = SimulationRunner(orchestrator=Follow)
         self._camera_streamer = CameraStreamer(simulation=self._simulation, attached_body_name='quadrotor')
         self._gui = GUI(self._simulation, self._camera_streamer)
-        logger = logging.getLogger(__name__)
-
-
-
         print("App: Starting")
     
     def run(self) -> None:

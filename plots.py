@@ -1,8 +1,9 @@
-
 import numpy as np
 import matplotlib.pyplot as plt
 
-def plot_log(drone_log, platform_log):
+
+def plot_log(drone_log, platform_log, filename="output_plot.png"):
+
     fig, axs = plt.subplots(4, 3, figsize=(15, 6))
     axs = axs.flatten()
 
@@ -30,7 +31,4 @@ def plot_log(drone_log, platform_log):
         axs[i].xaxis.set_major_formatter(plt.FuncFormatter(lambda val, _: f'{val:.2f}'))
 
     plt.tight_layout()
-    filename = "output_plot.png"
     plt.savefig(filename)
-
-

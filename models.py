@@ -1,5 +1,3 @@
-import numpy as np
-
 from sensors import GPS
 
 
@@ -36,11 +34,7 @@ XML_GYRO_SENSOR_NAME = 'body_gyro'
 
 class Quadrotor(BasicModel):
     def __init__(self, info: str='quadrotor', env= None, xml_name: str= XML_DRONE_NAME):
-        super().__init__(
-            info=info,
-            env=env,
-            xml_name=xml_name
-        )
+        super().__init__(info=info, env=env, xml_name=xml_name)
         self._sensors = {
             'gps': GPS(self._env, self._body_id),
             'accel_sensor_id': self._env.sensor_id(XML_ACCEL_SENSOR_NAME),
@@ -58,19 +52,11 @@ XML_PLATFORM_JOINT_NAME_Y = 'platform_y'
 
 class MovingPlatform(BasicModel):
     def __init__(self, info: str = 'moving_platform', env=None, xml_name: str = XML_PLATFORM_NAME):
-        super().__init__(
-            info=info,
-            env=env,
-            xml_name=xml_name
-        )
-        self._sensors = {
-            'gps': GPS(self._env, self._body_id)
-        }
+        super().__init__(info=info, env=env, xml_name=xml_name)
+        self._sensors = {'gps': GPS(self._env, self._body_id)}
 
         self._joint_x_name = "platform_x"
         self._joint_y_name = "platform_y"
-
-
 
     @property
     def joint_x_name(self):

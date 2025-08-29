@@ -23,8 +23,6 @@ class GPS(BasicSensor):
             offset, scale = self._noise.step()
             return (self.get_pos(mode='no_noise') + offset) * scale
         
-        elif mode == 'no_noise':
-            return self._env.world_pos_of_body(self._body_id)
-        
-        else:
-            raise ValueError(f"Unknown mode: {mode}")
+        elif mode == 'no_noise':return self._env.world_pos_of_body(self._body_id)
+
+        else:raise ValueError(f"Unknown mode: {mode}")

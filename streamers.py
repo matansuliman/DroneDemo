@@ -26,6 +26,7 @@ class CameraStreamer(QObject):
         self.simulation = simulation
         self.update_rate = update_rate
         self.running = False
+        self.thread = None
 
         self.predictor = simulation.orchestrator.predictor
 
@@ -47,18 +48,19 @@ class CameraStreamer(QObject):
         if not self.running:
             return
         self.running = False
+        if self.thread is not None and self.thread.is_alive():
+            self.thread.join()
+            self.thread = None
 
     def _run(self):
         if not self.running:
             return
-        
         if not glfw.init():
             raise RuntimeError("GLFW could not be initialized")
         
         glfw.window_hint(glfw.VISIBLE, glfw.FALSE)  # <- Hide the window
         offscreen_window = glfw.create_window(self.width, self.height, "", None, None)
         glfw.make_context_current(offscreen_window)
-
         scene = mujoco.MjvScene(self.env.model, maxgeom=1000)
         context = mujoco.MjrContext(self.env.model, mujoco.mjtFontScale.mjFONTSCALE_150)
 
@@ -72,16 +74,11 @@ class CameraStreamer(QObject):
                 time.sleep(1.0 / self.update_rate)
                 continue
 
-            mujoco.mjv_updateScene(
-                self.env.model, self.env.data, self.opt, None, self.cam,
-                mujoco.mjtCatBit.mjCAT_ALL, scene
-            )
+            mujoco.mjv_updateScene(self.env.model, self.env.data, self.opt, None, self.cam, mujoco.mjtCatBit.mjCAT_ALL, scene)
 
             rgb_buffer = np.zeros((self.height, self.width, 3), dtype=np.uint8)
             mujoco.mjr_render(mujoco.MjrRect(0, 0, self.width, self.height), scene, context)
-            mujoco.mjr_readPixels(rgb_buffer, None,
-                                  mujoco.MjrRect(0, 0, self.width, self.height),
-                                  context)
+            mujoco.mjr_readPixels(rgb_buffer, None, mujoco.MjrRect(0, 0, self.width, self.height), context)
             rgb_image = np.flip(rgb_buffer, axis=0)
             self.frame_ready.emit(rgb_image)
 

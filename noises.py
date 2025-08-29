@@ -5,7 +5,7 @@ class BasicNoise:
     def __init__(self, env):
         self._env = env
 
-    def step(self, pos: np.ndarray, dt: float):
+    def step(self):
         raise NotImplementedError("Subclasses should implement this method")
     
     def reset(self):

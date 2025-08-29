@@ -193,7 +193,6 @@ class QuadrotorController(BasicController):
         self._apply_cmds(throttle, roll_cmd, pitch_cmd, yaw_cmd)
 
 
-
 DEFAULT_VELOCITY = (0.0, 0.0, 0.0)
 
 class MovingPlatformController(BasicController):
