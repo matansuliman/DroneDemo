@@ -2,18 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def plot_log(drone_log, platform_log, filename="output_plot.png"):
-    """Plot telemetry logs and save to a file.
-
-    Parameters
-    ----------
-    drone_log : dict
-        Logged data for the drone.
-    platform_log : dict
-        Logged data for the platform.
-    filename : str, optional
-        Output image filename. Defaults to ``"output_plot.png"``.
-    """
+def plot_log(drone_log, platform_log):
     fig, axs = plt.subplots(4, 3, figsize=(15, 6))
     axs = axs.flatten()
 
@@ -41,6 +30,7 @@ def plot_log(drone_log, platform_log, filename="output_plot.png"):
         axs[i].xaxis.set_major_formatter(plt.FuncFormatter(lambda val, _: f'{val:.2f}'))
 
     plt.tight_layout()
+    filename = "output_plot.png"
     plt.savefig(filename)
 
 
