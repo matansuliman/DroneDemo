@@ -1,18 +1,18 @@
 import numpy as np
 
-from sensors import GPS, INS
+from sensors import GPS
 
 
 class BasicModel:
-    def __init__(self, env, name, type_str= 'basicModel'):
+    def __init__(self, info: str ='', env= None, xml_name= ''):
+        self._info = info
         self._env = env
-        self._type_str = type_str
-        self._bodyId = self._bodyId = env.body_id(name)
+        self._body_id = self._body_id = env.body_id(xml_name)
         self._sensors = None
 
     @property
-    def type_str(self):
-        return self._type_str
+    def info(self):
+        return self._info
 
     @property
     def sensors(self):
@@ -20,23 +20,29 @@ class BasicModel:
     
     @property
     def body_id(self):
-        return self._bodyId
+        return self._body_id
     
     def get_pos(self, mode='noise'):
         return self.sensors['gps'].get_pos(mode=mode)
 
+    def __str__(self):
+        return f'model ({self.__class__.__name__}) info: {self._info}'
+
 
 XML_DRONE_NAME = 'x2'
-XML_ACCEL_SENSOR_NAME = 'body_linacc'
+XML_ACCEL_SENSOR_NAME = 'body_linac'
 XML_GYRO_SENSOR_NAME = 'body_gyro'
 
 
-class Drone(BasicModel):
-    def __init__(self, env, type_str='quadrotor'):
-        super().__init__(env, XML_DRONE_NAME, type_str)
+class Quadrotor(BasicModel):
+    def __init__(self, info: str='quadrotor', env= None, xml_name: str= XML_DRONE_NAME):
+        super().__init__(
+            info=info,
+            env=env,
+            xml_name=xml_name
+        )
         self._sensors = {
-            'gps': GPS(self._env, self._bodyId),
-            'ins': INS(self._env, self._bodyId),
+            'gps': GPS(self._env, self._body_id),
             'accel_sensor_id': self._env.sensor_id(XML_ACCEL_SENSOR_NAME),
             'gyro_sensor_id':  self._env.sensor_id(XML_GYRO_SENSOR_NAME),
         }
@@ -50,32 +56,26 @@ XML_PLATFORM_NAME = 'platform'
 XML_PLATFORM_JOINT_NAME_X = 'platform_x'
 XML_PLATFORM_JOINT_NAME_Y = 'platform_y'
 
-DEFAULT_VELOCITY = (0.0, 0.0, 0.0)
-
-
 class MovingPlatform(BasicModel):
-    def __init__(self, env, type_str= 'moving_platform', velocity=DEFAULT_VELOCITY):
-        super().__init__(env, XML_PLATFORM_NAME, type_str)
+    def __init__(self, info: str = 'moving_platform', env=None, xml_name: str = XML_PLATFORM_NAME):
+        super().__init__(
+            info=info,
+            env=env,
+            xml_name=xml_name
+        )
         self._sensors = {
-                'gps': GPS(self._env, self._bodyId),
-                'ins': INS(self._env, self._bodyId)
-            }
-        self._velocity = np.array(velocity, dtype=np.float64)
-        self._joint_x_id = env.model.joint(XML_PLATFORM_JOINT_NAME_X).qposadr
-        self._joint_y_id = env.model.joint(XML_PLATFORM_JOINT_NAME_Y).qposadr
+            'gps': GPS(self._env, self._body_id)
+        }
+
+        self._joint_x_name = "platform_x"
+        self._joint_y_name = "platform_y"
+
+
 
     @property
-    def velocity(self):
-        return self._velocity
-
-    @velocity.setter
-    def velocity(self, velocity):
-        self._velocity = velocity
+    def joint_x_name(self):
+        return self._joint_x_name
 
     @property
-    def joint_x_id(self):
-        return self._joint_x_id
-    
-    @property
-    def joint_y_id(self):
-        return self._joint_y_id
+    def joint_y_name(self):
+        return self._joint_y_name

@@ -1,7 +1,7 @@
 # environment.py
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Dict, Iterable, Optional, Tuple, Union
+from typing import Dict, Iterable, Optional, Union
 
 import numpy as np
 import mujoco
@@ -59,7 +59,7 @@ class ENV:
     def dt(self) -> float:
         return self._dt
 
-    def getTime(self) -> float:
+    def get_time(self) -> float:
         return self._data.time
 
     # -------------------- Simulation stepping --------------------
@@ -120,8 +120,8 @@ class ENV:
             bid = self.body_id(body_name)
 
             v_lin_body = cvel[bid, 3:]  # linear velocity in body frame
-            R_bw = xmat[bid]            # body->world
-            v_lin_world = R_bw @ v_lin_body
+            r_bw = xmat[bid]            # body->world
+            v_lin_world = r_bw @ v_lin_body
 
             # relative wind: air minus body velocity (world frame)
             v_rel = v_w - v_lin_world
@@ -130,10 +130,10 @@ class ENV:
                 continue
 
             # Quadratic drag, direction opposing relative motion
-            F = 0.5 * rho * cda * speed * v_rel  # world frame
+            f = 0.5 * rho * cda * speed * v_rel  # world frame
 
             # Apply at COM (no torque)
-            self._data.xfrc_applied[bid, :3] += F
+            self._data.xfrc_applied[bid, :3] += f
             # torque left zero
 
     # -------------------- External forces helpers --------------------
@@ -322,15 +322,15 @@ class ENV:
         g = self._model.opt.gravity.copy()
         mag = np.linalg.norm(g)
         if mag > 0:
-            self._model.opt.gravity[:] = g * (scale)
+            self._model.opt.gravity[:] = g * scale
 
     # -------------------- Debug helpers --------------------
     def world_linvel_of_body(self, body: Union[str, int]) -> np.ndarray:
         """Return world-frame COM linear velocity of a body (derived from cvel)."""
         bid = self.body_id(body)
-        R_bw = self._data.xmat[bid].reshape(3, 3)
+        r_bw = self._data.xmat[bid].reshape(3, 3)
         v_lin_body = self._data.cvel[bid, 3:]  # body frame
-        return R_bw @ v_lin_body
+        return r_bw @ v_lin_body
 
     def world_pos_of_body(self, body: Union[str, int]) -> np.ndarray:
         return self._data.xpos[self.body_id(body)].copy()

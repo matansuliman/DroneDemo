@@ -1,54 +1,59 @@
 import sys
+import builtins
+import datetime
 import threading
 from PySide6.QtWidgets import QApplication
 
+# init logger file and print function
+built_in_print = builtins.print
+builtins.print = lambda data: built_in_print(f"[{datetime.datetime.now()}] {data}")
+logger_file_descriptor = open("app.log", "w")
+sys.stdout = logger_file_descriptor
+sys.stderr = logger_file_descriptor
+
 from simulation import SimulationRunner
-from orchestrators import FollowTarget
-from guis import TargetControlGUI
+from orchestrators import Follow
+from guis import GUI
 from streamers import CameraStreamer
 from plots import plot_log
 
-class App:
-    def __init__(self, args=None):
-        if args is None:
-            args = {}
-        self._args = args
-    
-    def start(self) -> None:
 
-        print(self._args)
+class App:
+    def __init__(self, info: str= ''):
+        self._info = info
+        self._app = QApplication(sys.argv)
+        self._simulation = SimulationRunner(orchestrator=Follow)
+        self._camera_streamer = CameraStreamer(simulation=self._simulation, attached_body_name='quadrotor')
+        self._gui = GUI(self._simulation, self._camera_streamer)
+
+
+
+
+        print("App: Starting")
+    
+    def run(self) -> None:
+        print("App: Running")
+        # Connect camera streamer to gui functions and start streaming
+        self._camera_streamer.detection_ready.connect(self._gui.update_marker_detection)
+        self._camera_streamer.frame_ready.connect(self._gui.update_camera_view)
+        self._camera_streamer.start()
 
         # Start simulation loop in background thread
-        simulation = SimulationRunner(FollowTarget)
-        threading.Thread(target=simulation.run, daemon=True).start()
+        threading.Thread(target=self._simulation.run, daemon=True).start()
 
-        # GUI + camera streamer
-        app = QApplication(sys.argv)
+        # show gui in the main thread
+        self._gui.show()
+        self._app.exec()
 
-        camera_streamer = CameraStreamer(
-            simulation=simulation,
-            attached_body=simulation.orchestrator.objects['drone'],
-            predictor=simulation.orchestrator.predictor,
-        )
-
-        gui = TargetControlGUI(simulation, camera_streamer)
-
-        camera_streamer.detection_ready.connect(gui.update_marker_detection)
-        camera_streamer.frame_ready.connect(gui.update_camera_view)
-        camera_streamer.start()
-
-        gui.show()
-        app.exec()
-
-        # Plot after GUI closes
+    def exit(self):
+        print("App: Plotting")
         plot_log(
-            simulation.orchestrator.objects['drone_controller'].log,
-            simulation.orchestrator.objects['platform_controller'].log,
+            self._simulation.orchestrator.objects['quadrotor_controller'].log,
+            self._simulation.orchestrator.objects['platform_controller'].log,
         )
-
+        print("App: Exiting")
 
 if __name__ == "__main__":
-    print("Starting Drone App")
     myapp = App()
-    myapp.start()
-    print("Exiting Drone App")
+    myapp.run()
+    myapp.exit()

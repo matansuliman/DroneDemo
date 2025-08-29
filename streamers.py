@@ -19,15 +19,15 @@ class CameraStreamer(QObject):
     frame_ready = Signal(np.ndarray)
     detection_ready = Signal(str)
 
-    def __init__(self, simulation, attached_body,  predictor=None, update_rate =FPS):
+    def __init__(self, simulation, attached_body_name: str, update_rate =FPS):
         super().__init__()
         self.env = simulation.env
-        self.attached_body = attached_body
+        self.attached_body = simulation.orchestrator.objects[attached_body_name]
         self.simulation = simulation
         self.update_rate = update_rate
         self.running = False
 
-        self.predictor = predictor
+        self.predictor = simulation.orchestrator.predictor
 
         self.width = WIDTH
         self.height = HEIGHT

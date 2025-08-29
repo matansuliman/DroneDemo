@@ -66,7 +66,7 @@
 
   <sensor>
     <gyro name="body_gyro" site="imu"/>
-    <accelerometer name="body_linacc" site="imu"/>
+    <accelerometer name="body_linac" site="imu"/>
     <framequat name="body_quat" objtype="site" objname="imu"/>
   </sensor>
 
