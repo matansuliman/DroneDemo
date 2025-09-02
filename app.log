@@ -1,12 +1,22 @@
-[2025-08-29 21:29:54.490964] simulation (SimulationRunner) info: runs mujoco
-	orchestrator (Follow) info: drone follow platform, objects:
-		<mujoco.viewer.Handle object at 0x000002E3A2B94B90>
-		model (Quadrotor) info: quadrotor
-		model (MovingPlatform) info: moving_platform
-		model (QuadrotorController) info: QuadrotorController
-		model (MovingPlatformController) info: QuadrotorController
-[2025-08-29 21:29:54.525689] App: Starting
-[2025-08-29 21:29:54.525689] App: Running
-[2025-08-29 21:29:56.058368] GUI: pressed terminate
-[2025-08-29 21:29:56.318592] App: Plotting
-[2025-08-29 21:29:58.030080] App: Exiting
+2025-09-02 16:06:16 [INFO] app: App: Initiating
+2025-09-02 16:06:17 [DEBUG] app: simulation (SimulationRunner) info: runs mujoco
+2025-09-02 16:06:17 [DEBUG] app: 	orchestrator (Follow) info: drone follow platform, objects:
+2025-09-02 16:06:17 [DEBUG] app: 		<mujoco.viewer.Handle object at 0x0000020ECBC65B90>
+2025-09-02 16:06:17 [DEBUG] app: 		model (Quadrotor) info: quadrotor
+2025-09-02 16:06:17 [DEBUG] app: 		model (MovingPlatform) info: moving_platform
+2025-09-02 16:06:17 [DEBUG] app: 		model (QuadrotorController) info: QuadrotorController
+2025-09-02 16:06:17 [DEBUG] app: 		model (MovingPlatformController) info: QuadrotorController
+2025-09-02 16:06:17 [INFO] app: App: Initiated Simulation ,Camera Streamer and GUI
+2025-09-02 16:06:17 [INFO] app: App: Running
+2025-09-02 16:06:17 [INFO] app: App: Start streaming in background thread
+2025-09-02 16:06:17 [INFO] app: App: Start simulation loop in background thread
+2025-09-02 16:06:17 [INFO] app: App: Show gui in the main thread
+2025-09-02 16:06:20 [DEBUG] app: GUI: platform velocity = 0.40, 0.00, 0.00
+2025-09-02 16:06:21 [DEBUG] app: GUI: platform velocity = 0.40, -0.40, 0.00
+2025-09-02 16:06:21 [DEBUG] app: GUI: wind = -0.70, 0.00, 0.0
+2025-09-02 16:06:22 [DEBUG] app: GUI: wind = -0.70, 1.20, 0.0
+2025-09-02 16:06:22 [DEBUG] app: GUI: pressed terminate
+2025-09-02 16:06:22 [DEBUG] app: Simulation: set_loop_state to terminate
+2025-09-02 16:06:23 [INFO] app: App: Exiting
+2025-09-02 16:06:24 [INFO] app: App: Plotted logs
+2025-09-02 16:06:24 [INFO] app: App: Exited

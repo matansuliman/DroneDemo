@@ -3,8 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, Iterable, Optional, Union
 
+import glfw
 import numpy as np
 import mujoco
+import mujoco.viewer
+
+import logging
+logger = logging.getLogger("app")
 
 PATH_TO_XML = "skydio_x2/scene.xml"
 
@@ -45,6 +50,10 @@ class ENV:
         self._joint_id_cache: Dict[str, int] = {}
         self._act_id_cache: Dict[str, int] = {}
         self._sensor_id_cache: Dict[str, int] = {}
+
+
+    def launch_viewer(self):
+        return mujoco.viewer.launch_passive(self._model, self._data)
 
     # -------------------- Core properties --------------------
     @property

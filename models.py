@@ -1,25 +1,28 @@
 from sensors import GPS
 
+import logging
+logger = logging.getLogger("app")
+
 
 class BasicModel:
     def __init__(self, info: str ='', env= None, xml_name= ''):
         self._info = info
         self._env = env
         self._body_id = env.body_id(xml_name)
-        self._sensors = None
+        self._sensors = {'gps': GPS(self._env, self._body_id)}
 
     @property
     def info(self):
         return self._info
 
     @property
-    def sensors(self):
-        return self._sensors
-    
-    @property
     def body_id(self):
         return self._body_id
-    
+
+    @property
+    def sensors(self):
+        return self._sensors
+
     def get_pos(self, mode='noise'):
         return self.sensors['gps'].get_pos(mode=mode)
 
@@ -27,36 +30,29 @@ class BasicModel:
         return f'model ({self.__class__.__name__}) info: {self._info}'
 
 
-XML_DRONE_NAME = 'x2'
-XML_ACCEL_SENSOR_NAME = 'body_linac'
-XML_GYRO_SENSOR_NAME = 'body_gyro'
-
-
 class Quadrotor(BasicModel):
-    def __init__(self, info: str='quadrotor', env= None, xml_name: str= XML_DRONE_NAME):
-        super().__init__(info=info, env=env, xml_name=xml_name)
-        self._sensors = {
-            'gps': GPS(self._env, self._body_id),
-            'accel_sensor_id': self._env.sensor_id(XML_ACCEL_SENSOR_NAME),
-            'gyro_sensor_id':  self._env.sensor_id(XML_GYRO_SENSOR_NAME),
-        }
-    
-    @property
-    def sensors(self):
-        return self._sensors
+    XML_BODY_NAME = 'x2'
+    CDA = 0.04
 
+    def __init__(self, info: str='quadrotor', env= None):
+        super().__init__(info=info, env=env, xml_name=Quadrotor.XML_BODY_NAME)
+        self._env.set_body_cda(body=Quadrotor.XML_BODY_NAME, cda=Quadrotor.CDA)
 
-XML_PLATFORM_NAME = 'platform'
-XML_PLATFORM_JOINT_NAME_X = 'platform_x'
-XML_PLATFORM_JOINT_NAME_Y = 'platform_y'
 
 class MovingPlatform(BasicModel):
-    def __init__(self, info: str = 'moving_platform', env=None, xml_name: str = XML_PLATFORM_NAME):
-        super().__init__(info=info, env=env, xml_name=xml_name)
-        self._sensors = {'gps': GPS(self._env, self._body_id)}
+    XML_BODY_NAME = 'platform_body'
+    CDA = 0.25
 
-        self._joint_x_name = "platform_x"
-        self._joint_y_name = "platform_y"
+    def __init__(self, info: str = 'moving_platform', env=None):
+        super().__init__(info=info, env=env, xml_name=MovingPlatform.XML_BODY_NAME)
+        self._env.set_body_cda(body=MovingPlatform.XML_BODY_NAME, cda=MovingPlatform.CDA)
+        self._radius = 1
+        self._joint_x_name = 'platform_joint_x'
+        self._joint_y_name = 'platform_joint_y'
+
+    @property
+    def radius(self):
+        return self._radius
 
     @property
     def joint_x_name(self):

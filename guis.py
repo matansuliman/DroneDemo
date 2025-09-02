@@ -3,6 +3,9 @@ from PySide6 import QtWidgets, QtCore
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QApplication, QWidget
 
+import logging
+logger = logging.getLogger("app")
+
 
 class GUI(QWidget):
     def __init__(self, simulation, camera_streamer):
@@ -75,7 +78,7 @@ class GUI(QWidget):
         self.timer.timeout.connect(self._sync_land_btn)
         self.timer.start(100)
 
-    # ---------- Camera ----------
+    # ---------- Camera ---------- #
     def update_camera_view(self, frame):
         h, w, ch = frame.shape
         bytes_per_line = ch * w
@@ -87,7 +90,7 @@ class GUI(QWidget):
         if result:
             self.marker_detection_label.setText(f"Marker Detection: {result}")
 
-    # ---------- Helpers ----------
+    # ---------- Helpers ---------- #
     def _group(self, title: str) -> QtWidgets.QGroupBox:
         box = QtWidgets.QGroupBox(title)
         lay = QtWidgets.QVBoxLayout(box)
@@ -118,27 +121,27 @@ class GUI(QWidget):
     def _slider_value(self, sdict) -> float:
         return sdict['min'] + sdict['slider'].value() * sdict['step']
 
-    # ---------- Actions ----------
+    # ---------- Actions ---------- #
     def _apply_velocity(self):
         new_vx = self._slider_value(self.vel_x)
         new_vy = self._slider_value(self.vel_y)
         vz = float(self.objects['platform_controller'].velocity[2])  # keep Z unchanged
         self.objects['platform_controller'].velocity = np.array([new_vx, new_vy, vz])
-        print(f"GUI: platform velocity = {new_vx:.2f}, {new_vy:.2f}, {vz:.2f}")
+        logger.debug(f"GUI: platform velocity = {new_vx:.2f}, {new_vy:.2f}, {vz:.2f}")
 
     def _apply_wind(self):
         vx = self._slider_value(self.wind_x)
         vy = self._slider_value(self.wind_y)
         self.env.enable_wind(True)
         self.env.set_wind(velocity_world=[vx, vy, 0.0])
-        print(f"GUI: wind = {vx:.2f}, {vy:.2f}, {0.00}")
+        logger.debug(f"GUI: wind = {vx:.2f}, {vy:.2f}, {0.00}")
 
     def toggle_pause_resume(self):
         if self.simulation.is_loop_state('pause'):
-            print("GUI: pressed resume")
+            logger.debug("GUI: pressed resume")
             self.simulation.set_loop_state(resume=True)
         else:
-            print("GUI: pressed pause")
+            logger.debug("GUI: pressed pause")
             self.simulation.set_loop_state(pause=True)
 
     def _sync_pause_label(self):
@@ -156,17 +159,17 @@ class GUI(QWidget):
             self.land_btn.setEnabled(False)
 
     def _on_terminate(self):
-        print("GUI: pressed terminate")
+        logger.debug("GUI: pressed terminate")
         self.simulation.set_loop_state(terminate=True)
         QtCore.QTimer.singleShot(200, QApplication.quit)
 
     def _on_land(self):
-        print("GUI: pressed land")
+        logger.debug("GUI: pressed land")
         self.objects['quadrotor_controller'].descend()
 
-    # Ensure camera thread halts on close
     def closeEvent(self, event):
+        # Ensure camera thread halts on close
         try:
-            self.camera_streamer.stop()
+            self.camera_streamer.terminate()
         finally:
             super().closeEvent(event)

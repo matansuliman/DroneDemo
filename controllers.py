@@ -1,14 +1,18 @@
 import numpy as np
 from simple_pid import PID
 from scipy.spatial.transform import Rotation as R
+from models import BasicModel
+
+import logging
+logger = logging.getLogger("app")
 
 
 class BasicController:
-    def __init__(self, info: str ='BasicController', env= None, plant= None):
+    def __init__(self, info: str ='', env= None, plant: BasicModel= None):
         self._info = info
         self._env = env
         self._plant = plant
-        self._log = {}
+        self._log = dict()
 
     @property
     def info(self):
@@ -20,7 +24,7 @@ class BasicController:
     
     def clear_log(self):
         for key in self._log.keys():
-            self._log[key] = [] 
+            self._log[key] = []
     
     def step(self):
         raise NotImplementedError("Subclasses should implement this method")
@@ -47,11 +51,7 @@ LANDING_ALT_FF = 0
 
 class QuadrotorController(BasicController):
     def __init__(self, info: str='QuadrotorController', env= None, quadrotor= None):
-        super().__init__(
-            info=info,
-            env=env,
-            plant=quadrotor,
-        )
+        super().__init__(info=info, env=env, plant=quadrotor)
 
         self._log = {
             'time': [],
@@ -94,6 +94,7 @@ class QuadrotorController(BasicController):
         self._descending = True
         self.ff['target_z'] = LANDING_ALT_FF
         self.pids['z'].output_limits = LANDING_ALT_LIMITS
+        logger.debug("QuadrotorController: descending")
 
     def update_target(self, mode, data=None):
         if mode == 'hardcode':
@@ -115,7 +116,7 @@ class QuadrotorController(BasicController):
         else:
             raise ValueError(f"Unknown mode: {mode}")
 
-    def _outer_loop(self, fused_pos=None):
+    def _outer_loop(self):
 
         pos = self._plant.get_pos(mode='no_noise')
         noise_pos = self._plant.get_pos(mode='noise')
@@ -197,11 +198,7 @@ DEFAULT_VELOCITY = (0.0, 0.0, 0.0)
 
 class MovingPlatformController(BasicController):
     def __init__(self, info: str='QuadrotorController', env= None, platform= None):
-        super().__init__(
-            info=info,
-            env=env,
-            plant=platform,
-        )
+        super().__init__(info=info, env=env, plant=platform)
 
         self._velocity = np.array(DEFAULT_VELOCITY, dtype=np.float64)
         self._locks_activated = False
@@ -218,6 +215,7 @@ class MovingPlatformController(BasicController):
 
     def activate_locks(self):
         self._locks_activated = True
+        logger.debug("MovingPlatformController: activating locks")
 
     def deactivate_locks(self):
         self._locks_activated = False
@@ -242,8 +240,6 @@ class MovingPlatformController(BasicController):
         self._log['x'].append(pos[0])
         self._log['y'].append(pos[1])
         self._log['z'].append(pos[2])
-
-        
         pos_noise = self._plant.get_pos(mode='noise')
         self._log['x_noise'].append(pos_noise[0])
         self._log['y_noise'].append(pos_noise[1])

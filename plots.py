@@ -1,6 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+import logging
+logger = logging.getLogger("app")
+
 
 def plot_log(drone_log, platform_log, filename="output_plot.png"):
 

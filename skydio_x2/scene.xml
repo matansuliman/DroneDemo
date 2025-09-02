@@ -1,5 +1,5 @@
 <mujoco model="Skydio X2 scene">
-  <include file="x2.xml" />
+  <compiler autolimits="true" assetdir="assets"/>
 
   <statistic center="0 0 0.1" extent="0.6" meansize=".05"/>
 
@@ -10,23 +10,17 @@
   </visual>
 
   <asset>
-    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072"/>
-    <texture type="2d" name="groundplane" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3"
-      markrgb="0.8 0.8 0.8" width="300" height="300"/>
-    <material name="groundplane" texture="groundplane" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
-    <texture name="donut_tex" type="2d" file="donut_with_markers.png"/>
-    <material name="donut_material" texture="donut_tex" texrepeat="1 1" texuniform="true"/>
+    <texture name="sky" type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="1024" height="3000"/>
+    <texture name="ground_texture" type="2d" builtin="checker" mark="edge" rgb1="0.2 0.3 0.4" rgb2="0.1 0.2 0.3" markrgb="0.8 0.8 0.8" width="300" height="300"/>
+    <material name="ground_material" texture="ground_texture" texuniform="true" texrepeat="5 5" reflectance="0.2"/>
   </asset>
 
   <worldbody>
     <light pos="0 0 1.5" dir="0 0 -1" directional="true"/>
-    <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>
-    <body name="platform" pos="0 0 0.1">
-      <joint name="platform_x" type="slide" axis="1 0 0" damping="5"/>
-      <joint name="platform_y" type="slide" axis="0 1 0" damping="5"/>
-      <geom name="donut_platform" type="cylinder" size="1.0 0.005" material="donut_material" rgba="1 1 1 1"
-        condim="4" friction="1.5 1.5 0.001" solref="0.001 0.2" solimp="0.6 0.95 0.001"/>
-    </body>
+    <geom name="floor" size="0 0 0.05" type="plane" material="ground_material"/>
   </worldbody>
+
+  <include file="quadrotor.xml" />
+  <include file="platform.xml" />
   
 </mujoco>
