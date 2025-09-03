@@ -35,6 +35,8 @@ class CameraStreamer(QObject):
         self.cam.type = mujoco.mjtCamera.mjCAMERA_FIXED
         self.cam.fixedcamid = mujoco.mj_name2id(self._env.model, mujoco.mjtObj.mjOBJ_CAMERA, "bottom_cam")
 
+        logger.info(f"\tCameraStreamer: Initiated {self.__class__.__name__}")
+
     def terminate(self):
         self._terminated = True
 
@@ -62,6 +64,6 @@ class CameraStreamer(QObject):
             self.frame_ready.emit(rgb_image)
 
             if self._predictor is not None:
-                self.detection_ready.emit(self._predictor.detect(rgb_image))
+                self.detection_ready.emit(self._predictor.predict(frame=rgb_image))
 
             time.sleep(1.0 / self._update_rate)

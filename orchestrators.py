@@ -3,16 +3,18 @@ import numpy as np
 from models import Quadrotor, MovingPlatform
 from controllers import QuadrotorController, MovingPlatformController
 from environment import ENV
-from predictors import MarkerDetector
+from predictors import ArUcoMarkerPredictor
+from detecrors import ArUcoMarkerDetector
 
 import logging
 logger = logging.getLogger("app")
 
 CAMERA_DISTANCE_MULTIPLIER = 1.3
-CAMERA_DISTANCE_OFFSET = 4
+CAMERA_DISTANCE_OFFSET = 5
 
 class BasicOrchestrator:
     def __init__(self, info: str= ''):
+        logger.info("\t\tOrchestrator: Initiating")
         self._info = info
         self._env = ENV()
         self._objects = dict() # {name: object}
@@ -36,8 +38,6 @@ class BasicOrchestrator:
         objs_str = "".join([f'\n\t\t{obj}' for name, obj in self._objects.items()])
         return f'orchestrator ({self.__class__.__name__}) info: {self._info}, objects:{objs_str}'
 
-TOL_DISTANCE_FROM_PLATFORM = 0.02 # 2cm
-PIXEL_TO_METER = 1/29 # 1px is 34.5cm
 
 class Follow(BasicOrchestrator):
     def __init__(self, info: str= 'drone follow platform'):
@@ -54,28 +54,32 @@ class Follow(BasicOrchestrator):
             'platform_controller': MovingPlatformController(env=self._env, platform=platform)
         }
 
-        # init wind
+        # Initialize params
+        self._scene_ended = False
+        self._predictor = ArUcoMarkerPredictor(model= ArUcoMarkerDetector)
+
+        # Initialize wind
         self._env.enable_wind(True)
         self._env.set_wind(velocity_world=[0, 0, 0], air_density=1.225)
 
-        # init params
-        self._locked_rel_pos_xy = None
-        self._predictor = MarkerDetector()
-        self._predicted = False
-        self._adjust = np.array([0,0,0])
+        # Initialize camera view
+        self._update_camera_viewer()
 
-        # init camera view
-        self.update_camera_viewer()
+        logger.info(f"\t\tOrchestrator: Initiated {self.__class__.__name__}")
     
     @property
     def predictor(self):
         return self._predictor
 
+    @property
+    def scene_ended(self):
+        return self._scene_ended
+
     @predictor.setter
     def predictor(self, predictor):
         self._predictor = predictor
 
-    def update_camera_viewer(self):
+    def _update_camera_viewer(self):
         drone_pos = self._objects['quadrotor'].get_pos(mode='no_noise')
         platform_pos = self._objects['platform'].get_pos(mode='no_noise')
         avg_pos = np.average([drone_pos[:3], platform_pos[:3]], axis=0)
@@ -83,9 +87,9 @@ class Follow(BasicOrchestrator):
         self._objects['viewer'].cam.lookat[:] = avg_pos
 
     def can_land(self):
-        if not self.objects['quadrotor_controller'].descending and self._predictor.is_valid():
-            last = np.array(self.predictor.get_last()) * PIXEL_TO_METER
-            return np.linalg.norm(last) < self._objects["platform"].radius
+        #print(not self.objects['quadrotor_controller'].descending, self._predictor.predicted)
+        if not self.objects['quadrotor_controller'].descending and self._predictor.predicted:
+            return np.linalg.norm(self._predictor.get_last()) < self._objects["platform"].radius
         else:
             return False
 
@@ -93,15 +97,18 @@ class Follow(BasicOrchestrator):
         drone_pos = self._objects['quadrotor'].get_pos(mode='no_noise')
         platform_pos = self._objects['platform'].get_pos(mode='no_noise')
 
-        if drone_pos[2] - platform_pos[2] < TOL_DISTANCE_FROM_PLATFORM:
-            self._locked_rel_pos_xy = np.array([drone_pos[0] - platform_pos[0],
-                                       drone_pos[1] - platform_pos[1]])
+        if drone_pos[2] - platform_pos[2] < self._objects['platform'].locks_arms_length:
+            self._objects['platform'].locks_end_pos = np.array([drone_pos[0] - platform_pos[0],
+                                                                drone_pos[1] - platform_pos[1]])
             return True
         return False
 
-    def print_results(self, status: str= 'success'):
-        acc = (1- self._locked_rel_pos_xy) * 100 / self._objects["platform"].radius
-        logger.debug(f'status: {status} relpos: {self._locked_rel_pos_xy} , 'f'accuracy: {acc}%')
+    def print_results(self, status: str= 'SUCCESS'):
+        abs_dis_from_center = abs(self._objects['platform'].locks_end_pos)
+        radius = self._objects["platform"].radius
+        precent = lambda whole, part: 100 * (1 - part/whole)
+        accuracy = precent(radius, abs_dis_from_center)
+        logger.debug(f" *** {status} ***\tAccuracy[x,y]: {accuracy}%")
         
     def step_scene(self):
         # step platform
@@ -110,30 +117,28 @@ class Follow(BasicOrchestrator):
         # step drone
         if self._objects['platform_controller'].locks_activated:
             platform_pos = self._objects['platform'].get_pos(mode='no_noise')
-            rel_pos = [self._locked_rel_pos_xy[0], self._locked_rel_pos_xy[1], 0]
-            
-            self._objects['quadrotor_controller'].update_target(mode = 'hardcode',
-                                                                data = {'qpos' : platform_pos + rel_pos})
+            rel_pos = np.append(self._objects['platform'].locks_end_pos, 0)
+
+            self._objects['quadrotor_controller'].update_target(pos= platform_pos + rel_pos)
+
+            self.print_results()
+            self._scene_ended = True
 
         elif self._drone_is_close_to_platform():
             self._objects['platform_controller'].activate_locks()
-            self.print_results()
         
         else:
-            if not self._predictor.predicted and self._predictor.is_valid() and self._predictor.is_stable():
-                self._adjust = np.append(self._predictor.get_mean_from_history(), 0) * PIXEL_TO_METER
-                self._predictor.predicted = True
-                logger.debug(f"Orchestrator: adjusted target pos")
+            new_target_pos = self._objects['platform'].get_pos(mode='noise')
 
-            self._objects['quadrotor_controller'].update_target(
-                mode = 'follow',
-                data = {'new_target_pos' : self._objects['platform'].get_pos(mode='noise') + self._adjust,
-                        'new_target_vel' : self._objects['platform_controller'].velocity}
-            )
+            # use predicator
+            if self.predictor.predicted:
+                new_target_pos += self._predictor.prediction
+
+            self._objects['quadrotor_controller'].update_target(pos= new_target_pos, vel= self._objects['platform_controller'].velocity)
             self._objects['quadrotor_controller'].step()
 
         # step camera view
-        self.update_camera_viewer()
+        self._update_camera_viewer()
 
         # sync viewer
         self._objects['viewer'].sync()

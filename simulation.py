@@ -9,11 +9,12 @@ logger = logging.getLogger("app")
 
 class BasicSimulationRunner:
     def __init__(self, info: str= '', orchestrator= BasicOrchestrator, loop_state= 'pause'):
+        logger.info("\tSimulation: Initiating")
         self._info = info
         self._orchestrator = orchestrator()
         self._env = self._orchestrator.env
         self._loop_state = loop_state
-        log_multiline(logger, str(self))
+        #log_multiline(logger, str(self))
 
     @property
     def info(self):
@@ -57,19 +58,31 @@ class BasicSimulationRunner:
 import threading
 
 class SimulationRunner(BasicSimulationRunner):
-    def __init__(self, info: str= 'runs mujoco', orchestrator= BasicOrchestrator, loop_state= 'resume'):
+    def __init__(self, info: str= 'runs MuJoCo', orchestrator= BasicOrchestrator, loop_state= 'resume'):
         super().__init__(info = info, orchestrator= orchestrator, loop_state= loop_state )
         self._pause_event = threading.Event()
+        logger.info(f"\tSimulation: Initiated {self.__class__.__name__}")
 
     def set_loop_state(self, terminate=False, pause=False, resume=False):
         super().set_loop_state(terminate=terminate, pause=pause, resume=resume)
-        if pause: self._pause_event.clear()
-        elif resume: self._pause_event.set()
+        if pause:
+            self._pause_event.clear()
+            logger.debug("Simulation: Paused")
+        elif resume:
+            self._pause_event.set()
+            logger.debug("Simulation: Resuming")
 
     def run(self):
+        logger.debug("Simulation: Running")
         while not self.is_loop_state('terminate'):
             self._pause_event.wait()
 
-            self._orchestrator.step_scene() # compute scene logic & write controls
-            self._env.step()                # advance physics with our effects (wind/drag etc.)
-            time.sleep(self._env.dt)        # keep real-time pacing
+            self._orchestrator.step_scene()  # advance scene
+            self._env.step()  # advance physics
+            time.sleep(self._env.dt)  # keep real-time pacing
+
+            if self._orchestrator.scene_ended:
+                self.set_loop_state(pause=True)
+
+
+        logger.info("Simulation: Terminated")

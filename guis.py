@@ -78,6 +78,8 @@ class GUI(QWidget):
         self.timer.timeout.connect(self._sync_land_btn)
         self.timer.start(100)
 
+        logger.info(f"\tGUI: Initiated {self.__class__.__name__}")
+
     # ---------- Camera ---------- #
     def update_camera_view(self, frame):
         h, w, ch = frame.shape

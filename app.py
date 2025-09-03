@@ -19,7 +19,7 @@ class App:
         self._simulation = SimulationRunner(orchestrator=Follow)
         self._camera_streamer = CameraStreamer(simulation=self._simulation)
         self._gui = GUI(self._simulation, self._camera_streamer)
-        logger.info("App: Initiated Simulation ,Camera Streamer and GUI")
+        logger.info("App: Initiated")
 
     
     def run(self) -> None:
@@ -29,13 +29,13 @@ class App:
         self._camera_streamer.detection_ready.connect(self._gui.update_marker_detection)
         self._camera_streamer.frame_ready.connect(self._gui.update_camera_view)
 
-        logger.info("App: Start streaming in background thread")
+        logger.debug("App: Start streaming in background thread")
         threading.Thread(target=self._camera_streamer.run, daemon=True).start()
 
-        logger.info("App: Start simulation loop in background thread")
+        logger.debug("App: Start simulation loop in background thread")
         threading.Thread(target=self._simulation.run, daemon=True).start()
 
-        logger.info("App: Show gui in the main thread")
+        logger.debug("App: Show gui in the main thread")
         self._gui.show()
         self._app.exec()
 
@@ -46,7 +46,7 @@ class App:
             self._simulation.orchestrator.objects['quadrotor_controller'].log,
             self._simulation.orchestrator.objects['platform_controller'].log,
         )
-        logger.info("App: Plotted logs")
+        logger.debug("App: Plotted logs")
         logger.info("App: Exited")
 
 if __name__ == "__main__":

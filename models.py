@@ -37,6 +37,7 @@ class Quadrotor(BasicModel):
     def __init__(self, info: str='quadrotor', env= None):
         super().__init__(info=info, env=env, xml_name=Quadrotor.XML_BODY_NAME)
         self._env.set_body_cda(body=Quadrotor.XML_BODY_NAME, cda=Quadrotor.CDA)
+        logger.info(f"\t\t\tModel: Initiated {self.__class__.__name__}")
 
 
 class MovingPlatform(BasicModel):
@@ -49,6 +50,9 @@ class MovingPlatform(BasicModel):
         self._radius = 1
         self._joint_x_name = 'platform_joint_x'
         self._joint_y_name = 'platform_joint_y'
+        self._locks_end_pos = None
+        self._locks_arms_length = 0.05 # 5cm
+        logger.info(f"\t\t\tModel: Initiated {self.__class__.__name__}")
 
     @property
     def radius(self):
@@ -61,3 +65,15 @@ class MovingPlatform(BasicModel):
     @property
     def joint_y_name(self):
         return self._joint_y_name
+
+    @property
+    def locks_end_pos(self):
+        return self._locks_end_pos
+
+    @locks_end_pos.setter
+    def locks_end_pos(self, value):
+        self._locks_end_pos = value
+
+    @property
+    def locks_arms_length(self):
+        return self._locks_arms_length
