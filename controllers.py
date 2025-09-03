@@ -1,23 +1,16 @@
 import numpy as np
 from simple_pid import PID
 from scipy.spatial.transform import Rotation as R
-from models import BasicModel
 
-import logging
-
-logger = logging.getLogger("app")
+from logger import LOGGER
+from config import CONFIG
 
 
 class BasicController:
-    def __init__(self, info: str = '', env=None, plant: BasicModel = None):
-        self._info = info
+    def __init__(self, env, plant):
         self._env = env
         self._plant = plant
         self._log = dict()
-
-    @property
-    def info(self):
-        return self._info
 
     @property
     def log(self):
@@ -30,17 +23,12 @@ class BasicController:
     def step(self):
         raise NotImplementedError("Subclasses should implement this method")
 
-    def __str__(self):
-        return f'model ({self.__class__.__name__}) info: {self._info}'
 
-
-def lower_upper_limits(x): return -x, x
-
-OUTER_LOOP_RATE = 20
+def sym_limits(x): return -x, x
 
 class QuadrotorController(BasicController):
-    def __init__(self, info: str = 'QuadrotorController', env=None, quadrotor=None):
-        super().__init__(info=info, env=env, plant=quadrotor)
+    def __init__(self, env, quadrotor):
+        super().__init__(env= env, plant= quadrotor)
 
         self._log = {
             'time': [],
@@ -50,31 +38,26 @@ class QuadrotorController(BasicController):
             'roll_cmd': [], 'pitch_cmd': [], 'yaw_cmd': []
         }
 
+        conf_pid = CONFIG["QuadrotorController"]["pids"]
         self.pids = {
-            'x': PID(Kp=0.15, Kd=0.40, setpoint=0, output_limits=lower_upper_limits(0.03)),
-            'y': PID(Kp=0.15, Kd=0.40, setpoint=0, output_limits=lower_upper_limits(0.03)),
-            'z': PID(Kp=0.15, Kd=0.55, setpoint=1, output_limits=lower_upper_limits(0.8)),
-            'roll': PID(Kp=0.50, Kd=0.30, setpoint=0, output_limits=lower_upper_limits(0.05)),
-            'pitch': PID(Kp=0.50, Kd=0.20, setpoint=0, output_limits=lower_upper_limits(0.05)),
-            'yaw': PID(Kp=0.50, Kd=0.50, setpoint=0, output_limits=(-2.00, 2.00))
+            'x':     PID(Kp= conf_pid["x"]["ki"], Kd= conf_pid["x"]["kd"], setpoint=conf_pid["x"]["setpoint"], output_limits=sym_limits(conf_pid["x"]["output_limit"])),
+            'y':     PID(Kp= conf_pid["y"]["ki"], Kd= conf_pid["x"]["kd"], setpoint=conf_pid["x"]["setpoint"], output_limits=sym_limits(conf_pid["x"]["output_limit"])),
+            'z':     PID(Kp= conf_pid["z"]["ki"], Kd= conf_pid["x"]["kd"], setpoint=conf_pid["x"]["setpoint"], output_limits=sym_limits(conf_pid["x"]["output_limit"])),
+            'roll':  PID(Kp= conf_pid["ro"]["ki"], Kd= conf_pid["ro"]["kd"], setpoint=conf_pid["ro"]["setpoint"], output_limits=sym_limits(conf_pid["ro"]["output_limit"])),
+            'pitch': PID(Kp= conf_pid["pi"]["ki"], Kd= conf_pid["pi"]["kd"], setpoint=conf_pid["pi"]["setpoint"], output_limits=sym_limits(conf_pid["pi"]["output_limit"])),
+            'yaw':   PID(Kp= conf_pid["ya"]["ki"], Kd= conf_pid["ya"]["kd"], setpoint=conf_pid["ya"]["setpoint"], output_limits=sym_limits(conf_pid["ya"]["output_limit"])),
         }
 
+        conf_ff = CONFIG["QuadrotorController"]["ff"]
         self.ff = {
-            'x': 1.74,
-            'y': 1.74,
-            'z': 10,
-            'throttle': 3.2495625,
+            'x': conf_ff["x"],
+            'y': conf_ff["y"],
+            'z': conf_ff["z"],
+            'throttle': conf_ff["throttle"]
         }
-
-        # Initialize target
-        self._target = np.zeros(3, dtype=np.float64)
 
         self._descending = False
-        logger.info(f"\t\t\tController: Initiated {self.__class__.__name__}")
-
-    @property
-    def target(self):
-        return self._target
+        LOGGER.info(f"\t\t\tController: Initiated {self.__class__.__name__}")
 
     @property
     def descending(self):
@@ -84,12 +67,12 @@ class QuadrotorController(BasicController):
         self._descending = True
         self.ff['z'] = 0
         self.pids['z'].output_limits = (-0.20, 0.10)
-        logger.debug("QuadrotorController: descending")
+        LOGGER.debug("QuadrotorController: descending")
 
-    def update_target(self, pos = (0, 0, 0), vel = None):
+    def set_reference(self, pos= (0, 0, 0), vel= None):
         if vel is None:
-            self._env.set_free_body_pose('x2', pos_world=pos, quat_wxyz=[1, 0, 0, 0])
-            self._env.set_free_body_velocity('x2', linvel_world=[0, 0, 0], angvel_world=[0, 0, 0])
+            self._env.set_free_body_pose(self._plant.XML_BODY_NAME, pos_world=pos, quat_wxyz=[1, 0, 0, 0])
+            self._env.set_free_body_velocity(self._plant.XML_BODY_NAME, linvel_world=[0, 0, 0], angvel_world=[0, 0, 0])
         else:
             # Update PID setpoints
             self.pids['x'].setpoint = pos[0] + self.ff['x'] * vel[0]
@@ -98,17 +81,19 @@ class QuadrotorController(BasicController):
 
     def _outer_loop(self):
         pos = self._plant.get_pos(mode='no_noise')
+        noise_pos = self._plant.get_pos(mode='noise')
 
         # Log
         self._log['x'].append(pos[0])
         self._log['y'].append(pos[1])
         self._log['z'].append(pos[2])
 
-        self._log['x_noise'].append(pos[0])
-        self._log['y_noise'].append(pos[1])
-        self._log['z_noise'].append(pos[2])
+        self._log['x_noise'].append(noise_pos[0])
+        self._log['y_noise'].append(noise_pos[1])
+        self._log['z_noise'].append(noise_pos[2])
 
-        interval = self._env.dt * OUTER_LOOP_RATE
+        hz = 20
+        interval = self._env.dt * hz
         current_time = self._env.get_time()
         previous_time = current_time - self._env.dt
 
@@ -121,16 +106,14 @@ class QuadrotorController(BasicController):
         return throttle
 
     def _inner_loop(self):
-        # [w, x, y, z]
-        quat = self._env.data.xquat[self._plant.body_id]
-
         # Convert quaternion to Euler angles
-        roll, pitch, yaw = R.from_quat(quat[[1, 2, 3, 0]]).as_euler('xyz', degrees=False)
+        quat_wxyz = self._env.data.xquat[self._plant.body_id]
+        roll, pitch, yaw = R.from_quat(quat_wxyz[[1, 2, 3, 0]]).as_euler('xyz', degrees=False)
 
         # Log
-        self.log['roll'].append(roll)
-        self.log['pitch'].append(pitch)
-        self.log['yaw'].append(yaw)
+        self._log['roll'].append(roll)
+        self._log['pitch'].append(pitch)
+        self._log['yaw'].append(yaw)
 
         # Control signals
         roll_cmd = self.pids['roll'](roll)
@@ -172,8 +155,8 @@ class QuadrotorController(BasicController):
 DEFAULT_VELOCITY = (0, 0, 0)
 
 class MovingPlatformController(BasicController):
-    def __init__(self, info: str = 'QuadrotorController', env=None, platform=None):
-        super().__init__(info=info, env=env, plant=platform)
+    def __init__(self, env, platform):
+        super().__init__(env= env, plant= platform)
 
         self._velocity = np.array(DEFAULT_VELOCITY, dtype=np.float64)
         self._locks_activated = False
@@ -183,7 +166,7 @@ class MovingPlatformController(BasicController):
             'x': [], 'y': [], 'z': [],
             'x_noise': [], 'y_noise': [], 'z_noise': [],
         }
-        logger.info(f"\t\t\tController: Initiated {self.__class__.__name__}")
+        LOGGER.info(f"\t\t\tController: Initiated {self.__class__.__name__}")
 
     @property
     def locks_activated(self):
@@ -191,7 +174,7 @@ class MovingPlatformController(BasicController):
 
     def activate_locks(self):
         self._locks_activated = True
-        logger.debug("MovingPlatformController: activating locks")
+        LOGGER.debug("MovingPlatformController: activating locks")
 
     def deactivate_locks(self):
         self._locks_activated = False
@@ -202,7 +185,7 @@ class MovingPlatformController(BasicController):
 
     @velocity.setter
     def velocity(self, velocity):
-        self._velocity = velocity
+        self._velocity = np.array(velocity, dtype=np.float64)
 
     def step(self):
         # Update position based on velocity

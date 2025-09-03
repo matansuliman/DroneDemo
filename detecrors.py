@@ -3,14 +3,12 @@ import cv2
 import numpy as np
 from PySide6.QtCore import QObject
 
-import logging
-
-logger = logging.getLogger("app")
+from logger import LOGGER
+from config import CONFIG
 
 
 class BasicDetector:
-    def __init__(self, info='', model=None):
-        self._info = info
+    def __init__(self, model):
         self._model = model
 
     def detect(self, frame):
@@ -18,11 +16,9 @@ class BasicDetector:
 
 
 class ArUcoMarkerDetector(BasicDetector):
-    PIXEL_TO_METER = 1 / 29  # 1px is 34.5cm
-
     def __init__(self):
-        super().__init__(info="ArUco Marker Detector", model=cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50))
-        logger.info(f"\t\t\t\tDetector: Initiated {self.__class__.__name__}")
+        super().__init__(model=cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50))
+        LOGGER.info(f"\t\t\t\tDetector: Initiated {self.__class__.__name__}")
 
     def detect(self, frame):
         gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
@@ -42,7 +38,7 @@ class ArUcoMarkerDetector(BasicDetector):
             centers[1] = -centers[1]
 
             # convert from px to meters
-            centers *= ArUcoMarkerDetector.PIXEL_TO_METER
+            centers *= CONFIG["Detector"]["px_to_meter"]
 
             # return detection with time stamp
             return time.time(), np.round(centers, 2)

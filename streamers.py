@@ -1,23 +1,17 @@
-import glfw
-import time
-import mujoco
-import threading
+import glfw, mujoco
+import time, threading
 import numpy as np
 from PySide6.QtCore import Signal, QObject
 
-import logging
-logger = logging.getLogger("app")
-
-FPS = 60
-WIDTH  = 320
-HEIGHT = 240
+from logger import LOGGER
+from config import CONFIG
 
 
 class CameraStreamer(QObject):
     frame_ready = Signal(np.ndarray)
     detection_ready = Signal(str)
 
-    def __init__(self, simulation, update_rate =FPS):
+    def __init__(self, simulation, update_rate= CONFIG["camera_streamer"]["fps"]):
         super().__init__()
         self._env = simulation.env
         self._simulation = simulation
@@ -26,8 +20,8 @@ class CameraStreamer(QObject):
         self._pause_event = threading.Event()
         self._predictor = simulation.orchestrator.predictor
 
-        self.width = WIDTH
-        self.height = HEIGHT
+        self.width = CONFIG["camera_streamer"]["width"]
+        self.height = CONFIG["camera_streamer"]["height"]
 
         # Init visualization objects
         self.opt = mujoco.MjvOption()
@@ -35,7 +29,7 @@ class CameraStreamer(QObject):
         self.cam.type = mujoco.mjtCamera.mjCAMERA_FIXED
         self.cam.fixedcamid = mujoco.mj_name2id(self._env.model, mujoco.mjtObj.mjOBJ_CAMERA, "bottom_cam")
 
-        logger.info(f"\tCameraStreamer: Initiated {self.__class__.__name__}")
+        LOGGER.info(f"\tCameraStreamer: Initiated {self.__class__.__name__}")
 
     def terminate(self):
         self._terminated = True
@@ -44,7 +38,7 @@ class CameraStreamer(QObject):
         if not glfw.init():
             raise RuntimeError("GLFW could not be initialized")
         
-        glfw.window_hint(glfw.VISIBLE, glfw.FALSE)  # <- Hide the window
+        glfw.window_hint(glfw.VISIBLE, glfw.FALSE)
         glfw.window_hint(glfw.SAMPLES, 4)
         offscreen_window = glfw.create_window(self.width, self.height, "", None, None)
         glfw.make_context_current(offscreen_window)

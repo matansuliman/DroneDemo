@@ -3,8 +3,7 @@ from PySide6 import QtWidgets, QtCore
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QApplication, QWidget
 
-import logging
-logger = logging.getLogger("app")
+from logger import LOGGER
 
 
 class GUI(QWidget):
@@ -78,7 +77,7 @@ class GUI(QWidget):
         self.timer.timeout.connect(self._sync_land_btn)
         self.timer.start(100)
 
-        logger.info(f"\tGUI: Initiated {self.__class__.__name__}")
+        LOGGER.info(f"\tGUI: Initiated {self.__class__.__name__}")
 
     # ---------- Camera ---------- #
     def update_camera_view(self, frame):
@@ -129,21 +128,21 @@ class GUI(QWidget):
         new_vy = self._slider_value(self.vel_y)
         vz = float(self.objects['platform_controller'].velocity[2])  # keep Z unchanged
         self.objects['platform_controller'].velocity = np.array([new_vx, new_vy, vz])
-        logger.debug(f"GUI: platform velocity = {new_vx:.2f}, {new_vy:.2f}, {vz:.2f}")
+        LOGGER.debug(f"GUI: platform velocity = {new_vx:.2f}, {new_vy:.2f}, {vz:.2f}")
 
     def _apply_wind(self):
         vx = self._slider_value(self.wind_x)
         vy = self._slider_value(self.wind_y)
         self.env.enable_wind(True)
         self.env.set_wind(velocity_world=[vx, vy, 0.0])
-        logger.debug(f"GUI: wind = {vx:.2f}, {vy:.2f}, {0.00}")
+        LOGGER.debug(f"GUI: wind = {vx:.2f}, {vy:.2f}, {0.00}")
 
     def toggle_pause_resume(self):
         if self.simulation.is_loop_state('pause'):
-            logger.debug("GUI: pressed resume")
+            LOGGER.debug("GUI: pressed resume")
             self.simulation.set_loop_state(resume=True)
         else:
-            logger.debug("GUI: pressed pause")
+            LOGGER.debug("GUI: pressed pause")
             self.simulation.set_loop_state(pause=True)
 
     def _sync_pause_label(self):
@@ -161,12 +160,12 @@ class GUI(QWidget):
             self.land_btn.setEnabled(False)
 
     def _on_terminate(self):
-        logger.debug("GUI: pressed terminate")
+        LOGGER.debug("GUI: pressed terminate")
         self.simulation.set_loop_state(terminate=True)
         QtCore.QTimer.singleShot(200, QApplication.quit)
 
     def _on_land(self):
-        logger.debug("GUI: pressed land")
+        LOGGER.debug("GUI: pressed land")
         self.objects['quadrotor_controller'].descend()
 
     def closeEvent(self, event):

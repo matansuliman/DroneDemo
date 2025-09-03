@@ -1,13 +1,14 @@
 from noises import GPSNoise
 
-import logging
-logger = logging.getLogger("app")
+from logger import LOGGER
+from config import CONFIG
+
 
 class BasicSensor:
-    def __init__(self, env, body_id: int):
+    def __init__(self, env, body_id):
         self._env = env
         self._body_id = body_id
-    
+
     @property
     def body_id(self):
         return self._body_id
@@ -17,7 +18,7 @@ class BasicSensor:
 
 
 class GPS(BasicSensor):
-    def __init__(self, env, body_id: int):
+    def __init__(self, env, body_id):
         super().__init__(env, body_id)
         self._noise = GPSNoise(self._env) # Initialize GPS noise model
 
