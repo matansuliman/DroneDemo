@@ -1,6 +1,7 @@
 import logging
+from config import CONFIG
 
-def setup_logger(name="app", log_file="app.log", level=logging.DEBUG):
+def setup_logger(name= CONFIG["logger"]["name"], log_file= CONFIG["logger"]["path"], level=logging.DEBUG):
     # Create a custom logger
     logger = logging.getLogger(name)
     logger.setLevel(level)
@@ -10,7 +11,7 @@ def setup_logger(name="app", log_file="app.log", level=logging.DEBUG):
     stream_handler = logging.StreamHandler()
 
     # Formatters
-    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
+    formatter = logging.Formatter(fmt= CONFIG["logger"]["fmt"], datefmt= CONFIG["logger"]["datefmt"])
     file_handler.setFormatter(formatter)
     stream_handler.setFormatter(formatter)
 

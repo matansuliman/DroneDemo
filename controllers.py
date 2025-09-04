@@ -1,6 +1,6 @@
 import numpy as np
 from simple_pid import PID
-from scipy.spatial.transform import Rotation as R
+from scipy.spatial.transform import Rotation
 
 from logger import LOGGER
 from config import CONFIG
@@ -71,8 +71,8 @@ class QuadrotorController(BasicController):
 
     def set_reference(self, pos= (0, 0, 0), vel= None):
         if vel is None:
-            self._env.set_free_body_pose(self._plant.XML_BODY_NAME, pos_world=pos, quat_wxyz=[1, 0, 0, 0])
-            self._env.set_free_body_velocity(self._plant.XML_BODY_NAME, linvel_world=[0, 0, 0], angvel_world=[0, 0, 0])
+            self._env.set_free_body_pose(self._plant.xml_name, pos_world=pos, quat_wxyz=[1, 0, 0, 0])
+            self._env.set_free_body_velocity(self._plant.xml_name, linvel_world=[0, 0, 0], angvel_world=[0, 0, 0])
         else:
             # Update PID setpoints
             self.pids['x'].setpoint = pos[0] + self.ff['x'] * vel[0]
@@ -108,7 +108,7 @@ class QuadrotorController(BasicController):
     def _inner_loop(self):
         # Convert quaternion to Euler angles
         quat_wxyz = self._env.data.xquat[self._plant.body_id]
-        roll, pitch, yaw = R.from_quat(quat_wxyz[[1, 2, 3, 0]]).as_euler('xyz', degrees=False)
+        roll, pitch, yaw = Rotation.from_quat(quat_wxyz[[1, 2, 3, 0]]).as_euler('xyz', degrees=False)
 
         # Log
         self._log['roll'].append(roll)

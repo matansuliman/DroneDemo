@@ -1,11 +1,12 @@
 import time, threading
+from unittest import case
 
 from logger import LOGGER
 from config import CONFIG
 
 
 class BasicSimulationRunner:
-    def __init__(self, orchestrator, loop_state= 'pause'):
+    def __init__(self, orchestrator, loop_state):
         LOGGER.info("\tSimulation: Initiating")
         self._orchestrator = orchestrator()
         self._env = self._orchestrator.env
@@ -22,19 +23,6 @@ class BasicSimulationRunner:
     @property
     def loop_state(self):
         return self._loop_state
-    
-    def set_loop_state(self, terminate=False, pause=False, resume=False):
-        if terminate:
-            self._loop_state = 'terminate'
-            LOGGER.debug(f"Simulation: set_loop_state to terminate")
-        elif pause:
-            self._loop_state = 'pause'
-            LOGGER.debug(f"Simulation: set_loop_state to pause")
-        elif resume:
-            self._loop_state = 'resume'
-            LOGGER.debug(f"Simulation: set_loop_state to resume")
-        else:
-            LOGGER.error(f"Simulation: Invalid loop state change request!")
         
     def is_loop_state(self, state):
         return self._loop_state == state
@@ -47,27 +35,29 @@ class SimulationRunner(BasicSimulationRunner):
     def __init__(self, orchestrator, loop_state= 'resume'):
         super().__init__(orchestrator= orchestrator, loop_state= loop_state)
         self._pause_event = threading.Event()
+        self._pause_event.clear() if loop_state == 'pause' else self._pause_event.set()
         LOGGER.info(f"\tSimulation: Initiated {self.__class__.__name__}")
 
-    def set_loop_state(self, terminate=False, pause=False, resume=False):
-        super().set_loop_state(terminate=terminate, pause=pause, resume=resume)
-        if pause:
-            self._pause_event.clear()
-            LOGGER.debug("Simulation: Paused")
-        elif resume:
-            self._pause_event.set()
-            LOGGER.debug("Simulation: Resuming")
+    def terminate(self):
+        self._loop_state = 'terminate'
+        LOGGER.debug(f"Simulation: Terminate")
+
+    def pause(self):
+        self._loop_state = 'pause'
+        self._pause_event.clear()
+        LOGGER.debug("Simulation: Pause")
+
+    def resume(self):
+        self._loop_state = 'resume'
+        self._pause_event.set()
+        LOGGER.debug("Simulation: Resume")
 
     def run(self):
         LOGGER.debug("Simulation: Running")
-        while not self.is_loop_state('terminate'):
-            self._pause_event.wait()
-
+        while not self.is_loop_state('terminate') and self._pause_event.wait():
             self._orchestrator.step_scene()  # advance scene
             self._env.step()  # advance physics
             time.sleep(self._env.dt)  # keep real-time pacing
-
-            if self._orchestrator.scene_ended:
-                self.set_loop_state(pause=True)
+            if self._orchestrator.scene_ended: self.pause()
 
         LOGGER.info("Simulation: Terminated")

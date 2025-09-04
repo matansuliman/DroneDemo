@@ -140,10 +140,10 @@ class GUI(QWidget):
     def toggle_pause_resume(self):
         if self.simulation.is_loop_state('pause'):
             LOGGER.debug("GUI: pressed resume")
-            self.simulation.set_loop_state(resume=True)
+            self.simulation.resume()
         else:
             LOGGER.debug("GUI: pressed pause")
-            self.simulation.set_loop_state(pause=True)
+            self.simulation.pause()
 
     def _sync_pause_label(self):
         paused = self.simulation.is_loop_state('pause')
@@ -161,7 +161,7 @@ class GUI(QWidget):
 
     def _on_terminate(self):
         LOGGER.debug("GUI: pressed terminate")
-        self.simulation.set_loop_state(terminate=True)
+        self.simulation.terminate()
         QtCore.QTimer.singleShot(200, QApplication.quit)
 
     def _on_land(self):

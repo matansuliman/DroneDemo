@@ -1,6 +1,5 @@
 import numpy as np
 
-
 from environment import ENV
 from models import Quadrotor, MovingPlatform
 from controllers import QuadrotorController, MovingPlatformController
@@ -33,14 +32,14 @@ class Follow(BasicOrchestrator):
         super().__init__()
 
         # Initialize objects
-        quadrotor = Quadrotor(env=self._env)
-        platform = MovingPlatform(env=self._env)
+        quadrotor = Quadrotor(env= self._env)
+        platform = MovingPlatform(env= self._env)
         self._objects = {
             'viewer': self._env.launch_viewer(),
             'quadrotor': quadrotor,
             'platform': platform,
-            'quadrotor_controller': QuadrotorController(env=self._env, quadrotor=quadrotor),
-            'platform_controller': MovingPlatformController(env=self._env, platform=platform)
+            'quadrotor_controller': QuadrotorController(env= self._env, quadrotor= quadrotor),
+            'platform_controller': MovingPlatformController(env= self._env, platform= platform)
         }
 
         # Initialize params

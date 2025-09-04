@@ -17,7 +17,7 @@ class BasicDetector:
 
 class ArUcoMarkerDetector(BasicDetector):
     def __init__(self):
-        super().__init__(model=cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50))
+        super().__init__(model= cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50))
         LOGGER.info(f"\t\t\t\tDetector: Initiated {self.__class__.__name__}")
 
     def detect(self, frame):
@@ -38,6 +38,7 @@ class ArUcoMarkerDetector(BasicDetector):
             centers[1] = -centers[1]
 
             # convert from px to meters
+
             centers *= CONFIG["Detector"]["px_to_meter"]
 
             # return detection with time stamp

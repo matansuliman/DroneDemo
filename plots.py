@@ -1,24 +1,22 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-import logging
-logger = logging.getLogger("app")
+from logger import LOGGER
+from config import CONFIG
 
-
-def plot_log(drone_log, platform_log, filename="output_plot.png"):
-
+def plot_log(drone_log, platform_log, filename= CONFIG["plotter"]["path"]):
     fig, axs = plt.subplots(4, 3, figsize=(15, 6))
     axs = axs.flatten()
 
     x_labels = ['x', 'y', 'z',
-               'x_noise', 'y_noise', 'z_noise',
-              'pitch', 'roll', 'yaw',
-              'pitch_cmd', 'roll_cmd', 'yaw_cmd']
+                'x_noise', 'y_noise', 'z_noise',
+                'pitch', 'roll', 'yaw',
+                'pitch_cmd', 'roll_cmd', 'yaw_cmd']
     
     y_labels = ['Centimeters', 'Centimeters', 'Centimeters',
-               'Centimeters', 'Centimeters', 'Centimeters',
-               'Radians', 'Radians', 'Radians',
-               'Radians', 'Radians', 'Radians']
+                'Centimeters', 'Centimeters', 'Centimeters',
+                'Radians', 'Radians', 'Radians',
+                'Radians', 'Radians', 'Radians']
 
     for i, (x_label, y_label) in enumerate(zip(x_labels, y_labels)):
         scale = 100 if i < 3 else 1
@@ -35,3 +33,5 @@ def plot_log(drone_log, platform_log, filename="output_plot.png"):
 
     plt.tight_layout()
     plt.savefig(filename)
+
+    LOGGER.info(f"Plots: plotted logs to {filename}")

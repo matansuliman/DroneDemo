@@ -1,9 +1,19 @@
+logger:
+  name: app
+  path: app.log
+  fmt: '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+  datefmt: "%Y-%m-%d %H:%M:%S"
+
+plotter:
+  path: output_plot.png
+
+
 Quadrotor:
-  xml_body_name: 'x2'
+  xml_body_name: x2
   cda: 0.04
 
 MovingPlatform:
-  xml_body_name: 'platform_body'
+  xml_body_name: platform_body
   cda: 0.25
   radius: 1
   locks_arms_length: 0.03
@@ -24,9 +34,14 @@ Predictor:
   tol_std: 0.2
 
 Detector:
-  px_to_meter: 0.03448275862 # 1px is 34.5cm
+  px_to_meter: 0.03448275862
 
 QuadrotorController:
+  descend:
+    ff_z: 0.02
+    pids_z_upper_limit: 0.1
+    pids_z_lower_limit: -0.2
+
   pids:
     x:
       ki: 0.15
@@ -42,7 +57,7 @@ QuadrotorController:
       ki: 0.15
       kd: 0.55
       setpoint: 1
-      output_limit: 0.08
+      output_limit: 0.8
     ro:
       ki: 0.50
       kd: 0.30
@@ -62,7 +77,7 @@ QuadrotorController:
   ff:
     x: 1.74
     y: 1.74
-    z: 10
+    z: 5
     throttle: 3.2495625
 
 

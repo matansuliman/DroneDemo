@@ -40,7 +40,6 @@ class App:
         drone_log = self._simulation.orchestrator.objects['quadrotor_controller'].log
         platform_log = self._simulation.orchestrator.objects['platform_controller'].log
         plot_log(drone_log, platform_log)
-        LOGGER.debug("App: Plotted logs")
         LOGGER.info("App: Exited")
 
 if __name__ == "__main__":
