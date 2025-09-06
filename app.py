@@ -24,9 +24,10 @@ class App:
     
     def run(self) -> None:
         LOGGER.info("App: Running")
-        LOGGER.debug("App: Connecting camera streamer to gui functions")
-        self._camera_streamer.detection_ready.connect(self._gui.update_marker_detection)
+        LOGGER.debug("App: Connecting camera streamer to gui")
         self._camera_streamer.frame_ready.connect(self._gui.update_camera_view)
+        LOGGER.debug("App: Connecting simulation to gui")
+        self._simulation.status_ready.connect(self._gui.update_simulation_data)
         LOGGER.debug("App: Start streaming in background thread")
         threading.Thread(target=self._camera_streamer.run, daemon=True).start()
         LOGGER.debug("App: Start simulation loop in background thread")
@@ -37,8 +38,8 @@ class App:
 
     def exit(self):
         LOGGER.info("App: Exiting")
-        drone_log = self._simulation.orchestrator.objects['quadrotor_controller'].log
-        platform_log = self._simulation.orchestrator.objects['platform_controller'].log
+        drone_log = self._simulation.orchestrator.objects['Quadrotor_controller'].log
+        platform_log = self._simulation.orchestrator.objects['Pad_controller'].log
         plot_log(drone_log, platform_log)
         LOGGER.info("App: Exited")
 

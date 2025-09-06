@@ -3,14 +3,15 @@ from PySide6 import QtWidgets, QtCore
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QApplication, QWidget
 
+from environment import ENVIRONMENT
 from logger import LOGGER
+from config import CONFIG
 
 
 class GUI(QWidget):
     def __init__(self, simulation, camera_streamer):
         super().__init__()
         self.simulation = simulation
-        self.env = simulation.orchestrator.env
         self.objects = simulation.orchestrator.objects
 
         self.camera_streamer = camera_streamer
@@ -23,8 +24,8 @@ class GUI(QWidget):
         # ============ ROOT LAYOUT ============
         root = QtWidgets.QVBoxLayout(self)
 
-        self.marker_detection_label = QtWidgets.QLabel("markers detection:")
-        root.addWidget(self.marker_detection_label)
+        self.simulation_data_label = QtWidgets.QLabel("")
+        root.addWidget(self.simulation_data_label)
 
         # ============ CAMERA ============
         self.camera_label = QtWidgets.QLabel()
@@ -34,9 +35,9 @@ class GUI(QWidget):
         # ============ CONTROLS STRIP ============
         # Velocity sliders (platform Vx, Vy)
         vel_box = self._group("Platform Velocity (m/s)")
-        self.vel_x = self._create_slider(-5.0, 5.0, self.objects['platform_controller'].velocity[0],
+        self.vel_x = self._create_slider(-5.0, 5.0, self.objects['Pad_controller'].velocity[0],
                                          "Vx", on_change=self._apply_velocity, step=0.1)
-        self.vel_y = self._create_slider(-5.0, 5.0, self.objects['platform_controller'].velocity[1],
+        self.vel_y = self._create_slider(-5.0, 5.0, self.objects['Pad_controller'].velocity[1],
                                          "Vy", on_change=self._apply_velocity, step=0.1)
         vel_box.layout().addLayout(self.vel_x['layout'])
         vel_box.layout().addLayout(self.vel_y['layout'])
@@ -59,7 +60,7 @@ class GUI(QWidget):
         buttons.addWidget(self.terminate_btn)
 
         self.land_btn = QtWidgets.QPushButton("Land")
-        self.land_btn.setStyleSheet("background:#d00; color:white; font-weight:bold;")
+        self.land_btn.setStyleSheet("background:#11b; color:black; font-weight:bold;")
         self.land_btn.clicked.connect(self._on_land)
         buttons.addWidget(self.land_btn)
 
@@ -87,9 +88,8 @@ class GUI(QWidget):
         self.camera_label.setPixmap(QPixmap.fromImage(qt_img))
 
     # Keep for compatibility with app.py’s connection, but no UI text (by request).
-    def update_marker_detection(self, result: str):
-        if result:
-            self.marker_detection_label.setText(f"Marker Detection: {result}")
+    def update_simulation_data(self, data: str):
+        self.simulation_data_label.setText(data)
 
     # ---------- Helpers ---------- #
     def _group(self, title: str) -> QtWidgets.QGroupBox:
@@ -126,15 +126,15 @@ class GUI(QWidget):
     def _apply_velocity(self):
         new_vx = self._slider_value(self.vel_x)
         new_vy = self._slider_value(self.vel_y)
-        vz = float(self.objects['platform_controller'].velocity[2])  # keep Z unchanged
-        self.objects['platform_controller'].velocity = np.array([new_vx, new_vy, vz])
+        vz = float(self.objects['Pad_controller'].velocity[2])  # keep Z unchanged
+        self.objects['Pad_controller'].velocity = np.array([new_vx, new_vy, vz])
         LOGGER.debug(f"GUI: platform velocity = {new_vx:.2f}, {new_vy:.2f}, {vz:.2f}")
 
     def _apply_wind(self):
         vx = self._slider_value(self.wind_x)
         vy = self._slider_value(self.wind_y)
-        self.env.enable_wind(True)
-        self.env.set_wind(velocity_world=[vx, vy, 0.0])
+        ENVIRONMENT.enable_wind(True)
+        ENVIRONMENT.set_wind(velocity_world=[vx, vy, 0.0])
         LOGGER.debug(f"GUI: wind = {vx:.2f}, {vy:.2f}, {0.00}")
 
     def toggle_pause_resume(self):
@@ -166,7 +166,9 @@ class GUI(QWidget):
 
     def _on_land(self):
         LOGGER.debug("GUI: pressed land")
-        self.objects['quadrotor_controller'].descend()
+        self.objects['Quadrotor_controller'].descend()
+        self.land_btn.setStyleSheet("background:#d00; color:white; font-weight:bold;")
+        self.land_btn.setEnabled(False)
 
     def closeEvent(self, event):
         # Ensure camera thread halts on close

@@ -1,6 +1,8 @@
 import time, threading
-from unittest import case
 
+from PySide6.QtCore import Signal, QObject
+
+from environment import ENVIRONMENT
 from logger import LOGGER
 from config import CONFIG
 
@@ -9,16 +11,11 @@ class BasicSimulationRunner:
     def __init__(self, orchestrator, loop_state):
         LOGGER.info("\tSimulation: Initiating")
         self._orchestrator = orchestrator()
-        self._env = self._orchestrator.env
         self._loop_state = loop_state
 
     @property
     def orchestrator(self):
         return self._orchestrator
-
-    @property
-    def env(self):
-        return self._env
 
     @property
     def loop_state(self):
@@ -27,11 +24,16 @@ class BasicSimulationRunner:
     def is_loop_state(self, state):
         return self._loop_state == state
 
+    def status(self):
+        raise NotImplementedError("Subclasses should implement this method")
+
     def run(self):
         raise NotImplementedError("Subclasses should implement this method")
 
 
-class SimulationRunner(BasicSimulationRunner):
+class SimulationRunner(QObject, BasicSimulationRunner):
+    status_ready = Signal(str)
+
     def __init__(self, orchestrator, loop_state= 'resume'):
         super().__init__(orchestrator= orchestrator, loop_state= loop_state)
         self._pause_event = threading.Event()
@@ -52,12 +54,16 @@ class SimulationRunner(BasicSimulationRunner):
         self._pause_event.set()
         LOGGER.debug("Simulation: Resume")
 
+    def status(self):
+        status = f"{self.__class__.__name__} status:\n"
+        return status + self.orchestrator.status()
+
     def run(self):
         LOGGER.debug("Simulation: Running")
         while not self.is_loop_state('terminate') and self._pause_event.wait():
             self._orchestrator.step_scene()  # advance scene
-            self._env.step()  # advance physics
-            time.sleep(self._env.dt)  # keep real-time pacing
-            if self._orchestrator.scene_ended: self.pause()
+            self.status_ready.emit(self.status()) # emit status
+            ENVIRONMENT.step()  # advance physics
+            time.sleep(ENVIRONMENT.dt)  # keep real-time pacing
 
         LOGGER.info("Simulation: Terminated")

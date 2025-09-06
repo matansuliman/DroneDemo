@@ -1,10 +1,11 @@
+import mujoco
 import numpy as np
 
-from environment import ENV
-from models import Quadrotor, MovingPlatform
-from controllers import QuadrotorController, MovingPlatformController
+from models import Quadrotor, Pad
+from controllers import QuadrotorController, PadController
 from predictors import ArUcoMarkerPredictor
 
+from environment import ENVIRONMENT
 from logger import LOGGER
 from config import CONFIG
 
@@ -12,16 +13,14 @@ from config import CONFIG
 class BasicOrchestrator:
     def __init__(self):
         LOGGER.info("\t\tOrchestrator: Initiating")
-        self._env = ENV()
         self._objects = dict() # {name: object}
-
-    @property
-    def env(self):
-        return self._env
     
     @property
     def objects(self):
         return self._objects
+
+    def status(self):
+        raise NotImplementedError("Subclasses should implement this method")
         
     def step_scene(self):
         raise NotImplementedError("Subclasses should implement this method")
@@ -32,15 +31,18 @@ class Follow(BasicOrchestrator):
         super().__init__()
 
         # Initialize objects
-        quadrotor = Quadrotor(env= self._env)
-        platform = MovingPlatform(env= self._env)
+        quadrotor = Quadrotor()
+        pad = Pad()
         self._objects = {
-            'viewer': self._env.launch_viewer(),
-            'quadrotor': quadrotor,
-            'platform': platform,
-            'quadrotor_controller': QuadrotorController(env= self._env, quadrotor= quadrotor),
-            'platform_controller': MovingPlatformController(env= self._env, platform= platform)
+            'viewer': ENVIRONMENT.launch_viewer(),
+            'Quadrotor': quadrotor,
+            'Pad': pad,
+            'Quadrotor_controller': QuadrotorController(quadrotor= quadrotor),
+            'Pad_controller': PadController(pad= pad)
         }
+
+        v = self._objects['viewer']
+        v.opt.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT] = True
 
         # Initialize params
         self._scene_ended = False
@@ -48,13 +50,15 @@ class Follow(BasicOrchestrator):
 
         # Initialize wind
         config_env = CONFIG["Follow_Orch"]["env"]
-        self._env.enable_wind(True)
-        self._env.set_wind(velocity_world= config_env["default_wind"], air_density= config_env["air_density"])
+        ENVIRONMENT.enable_wind(True)
+        ENVIRONMENT.set_wind(velocity_world= config_env["default_wind"], air_density= config_env["air_density"])
 
         # Initialize camera view
         self._update_camera_viewer()
 
         LOGGER.info(f"\t\tOrchestrator: Initiated {self.__class__.__name__}")
+
+
     
     @property
     def predictor(self):
@@ -69,55 +73,60 @@ class Follow(BasicOrchestrator):
         self._predictor = predictor
 
     def _update_camera_viewer(self):
-        drone_pos = self._objects['quadrotor'].get_pos(mode='no_noise')
-        platform_pos = self._objects['platform'].get_pos(mode='no_noise')
-        avg_pos = np.average([drone_pos[:3], platform_pos[:3]], axis=0)
-        self._objects['viewer'].cam.distance = CONFIG["Follow_Orch"]["viewer"]["camera_distance_coef"] * avg_pos[2] + CONFIG["Follow_Orch"]["viewer"]["camera_distance_ff"]
-        self._objects['viewer'].cam.lookat[:] = avg_pos
+        drone_pos = self._objects['Quadrotor'].get_true_pos()
+        pad_pos = self._objects['Pad'].get_true_pos()
+        avg_pos = np.average([drone_pos[:3], pad_pos[:3]], axis=0)
+        #self._objects['viewer'].cam.distance = CONFIG["Follow_Orch"]["viewer"]["camera_distance_coef"] * avg_pos[2] + CONFIG["Follow_Orch"]["viewer"]["camera_distance_ff"]
+        self._objects['viewer'].cam.lookat[:] = drone_pos # avg_pos
 
     def can_land(self):
-        #print(not self.objects['quadrotor_controller'].descending, self._predictor.predicted)
-        if not self.objects['quadrotor_controller'].descending and self._predictor.predicted:
-            return np.linalg.norm(self._predictor.get_last()) < self._objects["platform"].radius
-        else:
-            return False
+        if self.objects['Quadrotor_controller'].descending: return False
+        if not self._predictor.model.is_stable(mode= 'short-term'): return False
+        return np.linalg.norm(self._predictor.model.get_last()) < self._objects["Pad"].radius
 
-    def _drone_is_close_to_platform(self):
-        drone_pos = self._objects['quadrotor'].get_pos(mode='no_noise')
-        platform_pos = self._objects['platform'].get_pos(mode='no_noise')
+    def _pad_can_catch_drone(self):
+        return self._objects['Quadrotor'].sensors['rangefinder'].get() < self._objects['Pad'].locks_arms_length
 
-        if drone_pos[2] - platform_pos[2] < self._objects['platform'].locks_arms_length:
-            self._objects['platform'].locks_end_pos = np.array([drone_pos[0] - platform_pos[0],
-                                                                drone_pos[1] - platform_pos[1]])
-            return True
-        return False
-
-    def print_results(self, status: str= 'SUCCESS'):
-        abs_dis_from_center = abs(self._objects['platform'].locks_end_pos)
-        radius = self._objects["platform"].radius
+    def _results(self, status: str= 'SUCCESS'):
+        abs_dis_from_center = abs(self._objects['Pad'].locks_end_pos)
+        radius = self._objects["Pad"].radius
         precent = lambda whole, part: 100 * (1 - part/whole)
         accuracy = precent(radius, abs_dis_from_center)
-        LOGGER.debug(f" *** {status} ***\tAccuracy[x,y]: {accuracy}%")
+        return f" *** {status} ***\tAccuracy[x,y]: {accuracy}%"
+
+    def status(self):
+        status = f"{self.__class__.__name__} status:\n"
+        status += self._predictor.status()
+        status += self._objects['Quadrotor_controller'].status()
+        status += self._objects['Quadrotor'].status()
+        status += self._objects['Pad_controller'].status()
+        status += self._objects['Pad'].status()
+        if self._scene_ended: status += f"results: {self._results()}"
+        return status
         
     def step_scene(self):
-        self._objects['platform_controller'].step() # step platform
+        self._objects['Pad_controller'].step() # step pad
         
-        # step drone
-        if self._objects['platform_controller'].locks_activated:
-            platform_pos = self._objects['platform'].get_pos(mode='no_noise')
-            rel_pos = np.append(self._objects['platform'].locks_end_pos, 0)
-            self._objects['quadrotor_controller'].set_reference(pos= platform_pos + rel_pos)
-            self.print_results()
+        """# step drone
+        if self._objects['Pad_controller'].locks_activated:
+            pad_pos = self._objects['Pad'].get_true_pos()
+            rel_pos = np.append(self._objects['Pad'].locks_end_pos, 0)
+            self._objects['Quadrotor_controller'].teleport(pos= pad_pos + rel_pos)
             self._scene_ended = True
 
-        elif self._drone_is_close_to_platform():
-            self._objects['platform_controller'].activate_locks()
+        elif self._pad_can_catch_drone():
+            drone_pos = self._objects['Quadrotor'].get_true_pos()
+            pad_pos = self._objects['Pad'].get_true_pos()
+            rel_pos = drone_pos - pad_pos
+            self._objects['Pad_controller'].activate_locks(pos= rel_pos[:2])
 
-        else:
-            new_target_pos = self._objects['platform'].get_pos(mode='noise')
-            if self.predictor.predicted: new_target_pos += self._predictor.prediction # use predicator
-            self._objects['quadrotor_controller'].set_reference(pos= new_target_pos, vel= self._objects['platform_controller'].velocity)
-            self._objects['quadrotor_controller'].step()
+        else:"""
+        new_reference_pos = self._objects['Pad'].get_pos()
+        new_reference_vel = self._objects['Pad_controller'].velocity
+        self._predictor.predict()
+        new_reference_pos += self._predictor.prediction # use predicator
+        self._objects['Quadrotor_controller'].set_reference(pos= new_reference_pos, vel= new_reference_vel)
+        self._objects['Quadrotor_controller'].step()
 
         self._update_camera_viewer() # step camera view
         self._objects['viewer'].sync() # sync viewer

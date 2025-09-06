@@ -1,30 +1,38 @@
-2025-09-04 00:31:45 [INFO] app: App: Initiating
-2025-09-04 00:31:45 [INFO] app: 	Simulation: Initiating
-2025-09-04 00:31:45 [INFO] app: 		Orchestrator: Initiating
-2025-09-04 00:31:45 [INFO] app: 			Model: Initiated Quadrotor
-2025-09-04 00:31:45 [INFO] app: 			Model: Initiated MovingPlatform
-2025-09-04 00:31:46 [INFO] app: 			Controller: Initiated QuadrotorController
-2025-09-04 00:31:46 [INFO] app: 			Controller: Initiated MovingPlatformController
-2025-09-04 00:31:46 [INFO] app: 			Predictor: Initiating
-2025-09-04 00:31:46 [INFO] app: 				Detector: Initiated ArUcoMarkerDetector
-2025-09-04 00:31:46 [INFO] app: 			Predictor: Initiated ArUcoMarkerPredictor
-2025-09-04 00:31:46 [INFO] app: 		Orchestrator: Initiated Follow
-2025-09-04 00:31:46 [INFO] app: 	Simulation: Initiated SimulationRunner
-2025-09-04 00:31:46 [INFO] app: 	CameraStreamer: Initiated CameraStreamer
-2025-09-04 00:31:46 [INFO] app: 	GUI: Initiated GUI
-2025-09-04 00:31:46 [INFO] app: App: Initiated
-2025-09-04 00:31:46 [INFO] app: App: Running
-2025-09-04 00:31:46 [DEBUG] app: App: Connecting camera streamer to gui functions
-2025-09-04 00:31:46 [DEBUG] app: App: Start streaming in background thread
-2025-09-04 00:31:46 [DEBUG] app: App: Start simulation loop in background thread
-2025-09-04 00:31:46 [DEBUG] app: Simulation: Running
-2025-09-04 00:31:46 [DEBUG] app: App: Show gui in the main thread
-2025-09-04 00:32:13 [DEBUG] app: Predictor: findings are stable
-2025-09-04 00:32:13 [DEBUG] app: Predictor: full and stable
-2025-09-04 00:32:13 [DEBUG] app: Predictor: prediction = [4.26000023 1.22000003 0.        ]
-2025-09-04 00:32:35 [DEBUG] app: GUI: pressed terminate
-2025-09-04 00:32:35 [DEBUG] app: Simulation: Terminate
-2025-09-04 00:32:35 [INFO] app: Simulation: Terminated
-2025-09-04 00:32:36 [INFO] app: App: Exiting
-2025-09-04 00:32:37 [INFO] app: Plots: plotted logs to output_plot.png
-2025-09-04 00:32:37 [INFO] app: App: Exited
+2025-09-06 13:44:48 [INFO] app: App: Initiating
+2025-09-06 13:44:48 [INFO] app: 	Simulation: Initiating
+2025-09-06 13:44:48 [INFO] app: 		Orchestrator: Initiating
+2025-09-06 13:44:48 [INFO] app: 			Model: Initiated Quadrotor
+2025-09-06 13:44:48 [INFO] app: 			Model: Initiated Pad
+2025-09-06 13:44:48 [INFO] app: 			Controller: Initiated QuadrotorController
+2025-09-06 13:44:48 [INFO] app: 			PadController: Initiated PadController
+2025-09-06 13:44:48 [INFO] app: 			Predictor: Initiating
+2025-09-06 13:44:48 [INFO] app: 				Detector: Initiated ArUcoMarkerDetector
+2025-09-06 13:44:48 [INFO] app: 			Predictor: Initiated ArUcoMarkerPredictor
+2025-09-06 13:44:48 [INFO] app: 		Orchestrator: Initiated Follow
+2025-09-06 13:44:48 [INFO] app: 	Simulation: Initiated SimulationRunner
+2025-09-06 13:44:48 [INFO] app: 	CameraStreamer: Initiated CameraStreamer
+2025-09-06 13:44:48 [INFO] app: 	GUI: Initiated GUI
+2025-09-06 13:44:48 [INFO] app: App: Initiated
+2025-09-06 13:44:48 [INFO] app: App: Running
+2025-09-06 13:44:48 [DEBUG] app: App: Connecting camera streamer to gui
+2025-09-06 13:44:48 [DEBUG] app: App: Connecting simulation to gui
+2025-09-06 13:44:48 [DEBUG] app: App: Start streaming in background thread
+2025-09-06 13:44:48 [DEBUG] app: App: Start simulation loop in background thread
+2025-09-06 13:44:48 [DEBUG] app: Simulation: Running
+2025-09-06 13:44:48 [DEBUG] app: App: Show gui in the main thread
+2025-09-06 13:45:31 [DEBUG] app: GUI: platform velocity = -0.40, 0.00, 0.00
+2025-09-06 13:45:48 [DEBUG] app: GUI: platform velocity = -0.40, 0.50, 0.00
+2025-09-06 13:46:08 [DEBUG] app: Predictor: model is full and stable
+2025-09-06 13:46:08 [DEBUG] app: Predictor: predicting
+2025-09-06 13:46:08 [DEBUG] app: Predictor: prediction = [-1.11799932 -1.26374829  0.        ]
+2025-09-06 13:46:15 [DEBUG] app: GUI: pressed land
+2025-09-06 13:46:15 [DEBUG] app: QuadrotorController: descending
+2025-09-06 13:46:26 [DEBUG] app: Predictor: model is full and stable
+2025-09-06 13:46:26 [DEBUG] app: Predictor: predicting
+2025-09-06 13:46:26 [DEBUG] app: Predictor: prediction = [-1.1379493  -1.33899835  0.        ]
+2025-09-06 13:47:00 [DEBUG] app: GUI: pressed terminate
+2025-09-06 13:47:00 [DEBUG] app: Simulation: Terminate
+2025-09-06 13:47:00 [INFO] app: Simulation: Terminated
+2025-09-06 13:47:00 [INFO] app: App: Exiting
+2025-09-06 13:47:02 [INFO] app: Plots: plotted logs to output_plot.png
+2025-09-06 13:47:02 [INFO] app: App: Exited

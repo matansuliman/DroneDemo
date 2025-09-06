@@ -20,7 +20,7 @@
     <geom name="floor" size="0 0 0.05" type="plane" material="ground_material"/>
   </worldbody>
 
-  <include file="drone.xml" />
-  <include file="platform.xml" />
+  <include file="Quadrotor.xml" />
+  <include file="Pad.xml" />
   
 </mujoco>

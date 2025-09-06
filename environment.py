@@ -1,17 +1,12 @@
-# environment.py
 from __future__ import annotations
 from dataclasses import dataclass, field
+
 from typing import Dict, Iterable, Optional, Union
-
-import glfw
+import glfw, mujoco, mujoco.viewer
 import numpy as np
-import mujoco
-import mujoco.viewer
 
-import logging
-logger = logging.getLogger("app")
-
-PATH_TO_XML = "skydio_x2/scene.xml"
+from logger import LOGGER
+from config import CONFIG
 
 
 @dataclass
@@ -25,22 +20,10 @@ class WindConfig:
 
 
 class ENV:
-    """
-    Thin wrapper around (model, data) with convenient helpers and optional physics "extras".
-
-    New features:
-      - env.step(): wraps mj_step and injects configured effects (e.g., wind/drag)
-      - Wind/drag model you can toggle and adjust at runtime
-      - Utility setters: gravity, density, viscosity, timestep
-      - External forces helpers (add/clear)
-      - Body/joint helpers: ids, pose/vel setters for free bodies and joints
-      - Actuator control helpers
-      - Reset helpers
-    """
-    def __init__(self, path_to_xml: str = PATH_TO_XML, model: mujoco.MjModel = None, data: mujoco.MjData = None, dt: float = None):
-        self._model = model if model is not None else mujoco.MjModel.from_xml_path(path_to_xml)
-        self._data = data if data is not None else mujoco.MjData(self._model)
-        self._dt = dt if dt is not None else self._model.opt.timestep
+    def __init__(self, path_to_xml):
+        self._model = mujoco.MjModel.from_xml_path(path_to_xml)
+        self._data = mujoco.MjData(self._model)
+        self._dt = self._model.opt.timestep
 
         # --- Extras state ---
         self._wind = WindConfig()
@@ -343,3 +326,6 @@ class ENV:
 
     def world_pos_of_body(self, body: Union[str, int]) -> np.ndarray:
         return self._data.xpos[self.body_id(body)].copy()
+
+
+ENVIRONMENT = ENV(CONFIG["path_to_xml"])

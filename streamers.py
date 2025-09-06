@@ -3,6 +3,7 @@ import time, threading
 import numpy as np
 from PySide6.QtCore import Signal, QObject
 
+from environment import ENVIRONMENT
 from logger import LOGGER
 from config import CONFIG
 
@@ -13,7 +14,6 @@ class CameraStreamer(QObject):
 
     def __init__(self, simulation, update_rate= CONFIG["camera_streamer"]["fps"]):
         super().__init__()
-        self._env = simulation.env
         self._simulation = simulation
         self._update_rate = update_rate
         self._terminated = False
@@ -25,9 +25,11 @@ class CameraStreamer(QObject):
 
         # Init visualization objects
         self.opt = mujoco.MjvOption()
+        self.opt.flags[mujoco.mjtVisFlag.mjVIS_RANGEFINDER] = False
+
         self.cam = mujoco.MjvCamera()
         self.cam.type = mujoco.mjtCamera.mjCAMERA_FIXED
-        self.cam.fixedcamid = mujoco.mj_name2id(self._env.model, mujoco.mjtObj.mjOBJ_CAMERA, "bottom_cam")
+        self.cam.fixedcamid = mujoco.mj_name2id(ENVIRONMENT.model, mujoco.mjtObj.mjOBJ_CAMERA, "bottom_cam")
 
         LOGGER.info(f"\tCameraStreamer: Initiated {self.__class__.__name__}")
 
@@ -42,14 +44,14 @@ class CameraStreamer(QObject):
         glfw.window_hint(glfw.SAMPLES, 4)
         offscreen_window = glfw.create_window(self.width, self.height, "", None, None)
         glfw.make_context_current(offscreen_window)
-        scene = mujoco.MjvScene(self._env.model, maxgeom=1000)
-        context = mujoco.MjrContext(self._env.model, mujoco.mjtFontScale.mjFONTSCALE_150)
+        scene = mujoco.MjvScene(ENVIRONMENT.model, maxgeom=1000)
+        context = mujoco.MjrContext(ENVIRONMENT.model, mujoco.mjtFontScale.mjFONTSCALE_150)
 
         while not self._terminated:
             if self._simulation.is_loop_state('pause'):
                 continue
 
-            mujoco.mjv_updateScene(self._env.model, self._env.data, self.opt, None, self.cam, mujoco.mjtCatBit.mjCAT_ALL, scene)
+            mujoco.mjv_updateScene(ENVIRONMENT.model, ENVIRONMENT.data, self.opt, None, self.cam, mujoco.mjtCatBit.mjCAT_ALL, scene)
 
             rgb_buffer = np.zeros((self.height, self.width, 3), dtype=np.uint8)
             mujoco.mjr_render(mujoco.MjrRect(0, 0, self.width, self.height), scene, context)
@@ -58,6 +60,6 @@ class CameraStreamer(QObject):
             self.frame_ready.emit(rgb_image)
 
             if self._predictor is not None:
-                self.detection_ready.emit(self._predictor.predict(frame=rgb_image))
+                self._predictor.model.detect(frame= rgb_image)
 
             time.sleep(1.0 / self._update_rate)

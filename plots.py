@@ -8,8 +8,8 @@ def plot_log(drone_log, platform_log, filename= CONFIG["plotter"]["path"]):
     fig, axs = plt.subplots(4, 3, figsize=(15, 6))
     axs = axs.flatten()
 
-    x_labels = ['x', 'y', 'z',
-                'x_noise', 'y_noise', 'z_noise',
+    x_labels = ['x_true', 'y_true', 'z_true',
+                'x', 'y', 'z',
                 'pitch', 'roll', 'yaw',
                 'pitch_cmd', 'roll_cmd', 'yaw_cmd']
     

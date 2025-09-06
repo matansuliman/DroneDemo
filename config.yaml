@@ -1,7 +1,9 @@
+path_to_xml: "skydio_x2/scene.xml"
+
 logger:
   name: app
   path: app.log
-  fmt: '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+  fmt: "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
   datefmt: "%Y-%m-%d %H:%M:%S"
 
 plotter:
@@ -9,67 +11,73 @@ plotter:
 
 
 Quadrotor:
-  xml_body_name: x2
+  xml_body_name: Quadrotor
   cda: 0.04
+  sensors:
+    framepos: Quadrotor_framepos
+    rangefinder: Quadrotor_rangefinder
 
-MovingPlatform:
-  xml_body_name: platform_body
+
+Pad:
+  xml_body_name: Pad
   cda: 0.25
+  sensors:
+    framepos: Pad_framepos
   radius: 1
   locks_arms_length: 0.03
+  default_velocity: [0, 0, 0]
 
 
 Follow_Orch:
   viewer:
     camera_distance_coef: 1.5
-    camera_distance_ff: 5
-
+    camera_distance_ff: 8
   env:
     default_wind: [0, 0, 0]
     air_density: 1.225
 
 Predictor:
-  time_frame: 15
-  detect_per_time_frame: 10
-  tol_std: 0.2
 
 Detector:
+  history_max_len: 200
+  tol_stddev: 0.1
   px_to_meter: 0.03448275862
 
 QuadrotorController:
-  descend:
-    ff_z: 0.02
-    pids_z_upper_limit: 0.1
-    pids_z_lower_limit: -0.2
+  descend_phases:
+    names: ['fast-drop', 'approach', 'touchdown']
+    ff_z:     [3, 0.5, 0.02]
+    pid_z_ul: [0.1, 0.1, 0.1]
+    pid_z_ll: [-0.1, -0.05, -0.005]
 
   pids:
     x:
-      ki: 0.15
+      kp: 0.15
       kd: 0.4
       setpoint: 0
       output_limit: 0.03
     y:
-      ki: 0.15
+      kp: 0.15
       kd: 0.4
       setpoint: 0
       output_limit: 0.03
     z:
-      ki: 0.15
-      kd: 0.55
-      setpoint: 1
+      kp: 0.15
+      kd: 0.60
+      setpoint: 0
       output_limit: 0.8
     ro:
-      ki: 0.50
+      kp: 0.50
       kd: 0.30
       setpoint: 0
       output_limit: 0.05
     pi:
-      ki: 0.50
+      kp: 0.50
       kd: 0.20
       setpoint: 0
       output_limit: 0.05
     ya:
-      ki: 0.50
+      kp: 0.50
       kd: 0.50
       setpoint: 0
       output_limit: 2
@@ -77,8 +85,18 @@ QuadrotorController:
   ff:
     x: 1.74
     y: 1.74
-    z: 5
+    z: 10
     throttle: 3.2495625
+
+
+  mixing-matrix:
+    [
+      [ 1, 1, 1, 1 ],
+      [ 1, -1, 1, -1 ],
+      [ 1, -1, -1, 1 ],
+      [ 1, 1, -1, -1 ]
+    ]
+
 
 
 

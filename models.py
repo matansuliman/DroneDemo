@@ -1,15 +1,17 @@
-from sensors import GPS
+from sensors import GPS, Rangefinder
+from helpers import *
 
+from environment import ENVIRONMENT
 from logger import LOGGER
 from config import CONFIG
 
 
 class BasicModel:
-    def __init__(self, env, xml_name):
-        self._env = env
+    def __init__(self, child_class_name, xml_name):
         self._xml_name = xml_name
-        self._body_id = env.body_id(xml_name)
-        self._sensors = {'gps': GPS(self._env, self._body_id)}
+        self._body_id = ENVIRONMENT.body_id(xml_name)
+        self._sensors = {'framepos': GPS(sensor_name= CONFIG[child_class_name]["sensors"]["framepos"])}
+        ENVIRONMENT.set_body_cda(body= self._xml_name, cda= CONFIG[child_class_name]["cda"])
 
     @property
     def xml_name(self):
@@ -23,26 +25,38 @@ class BasicModel:
     def sensors(self):
         return self._sensors
 
-    def get_pos(self, mode='noise'):
-        return self.sensors['gps'].get_pos(mode=mode)
+    def get_pos(self):
+        return self.sensors['framepos'].get()
+
+    def get_true_pos(self):
+        return ENVIRONMENT.world_pos_of_body(self._body_id)
+
+    def status(self):
+        raise NotImplementedError("Subclasses should implement this method")
 
 
 class Quadrotor(BasicModel):
-    def __init__(self, env):
-        super().__init__(env=env, xml_name= CONFIG["Quadrotor"]["xml_body_name"])
-        self._env.set_body_cda(body= self._xml_name, cda= CONFIG["Quadrotor"]["cda"])
+    def __init__(self):
+        super().__init__(child_class_name= self.__class__.__name__, xml_name= CONFIG["Quadrotor"]["xml_body_name"])
+        self._sensors["rangefinder"] = Rangefinder(sensor_name= CONFIG["Quadrotor"]["sensors"]["rangefinder"])
         LOGGER.info(f"\t\t\tModel: Initiated {self.__class__.__name__}")
 
+    def status(self):
+        status = f"{self.__class__.__name__} status:\n"
+        status += f"\ttruepos: {print_array_of_nums(self.get_true_pos())}\n"
+        status += f"\tframepos: {print_array_of_nums(self.get_pos())}\n"
+        status += f"\trangefinder: {print_array_of_nums(self.sensors['rangefinder'].get())}\n"
+        return status
 
-class MovingPlatform(BasicModel):
-    def __init__(self, env):
-        super().__init__(env=env, xml_name= CONFIG["MovingPlatform"]["xml_body_name"])
-        self._env.set_body_cda(body= self._xml_name, cda= CONFIG["MovingPlatform"]["cda"])
-        self._radius = CONFIG["MovingPlatform"]["radius"]
-        self._joint_x_name = 'platform_joint_x'
-        self._joint_y_name = 'platform_joint_y'
+
+class Pad(BasicModel):
+    def __init__(self):
+        super().__init__(child_class_name= self.__class__.__name__, xml_name= CONFIG["Pad"]["xml_body_name"])
+        self._radius = CONFIG["Pad"]["radius"]
+        self._joint_x_name = 'Pad_joint_x'
+        self._joint_y_name = 'Pad_joint_y'
         self._locks_end_pos = None
-        self._locks_arms_length = CONFIG["MovingPlatform"]["locks_arms_length"]
+        self._locks_arms_length = CONFIG["Pad"]["locks_arms_length"]
         LOGGER.info(f"\t\t\tModel: Initiated {self.__class__.__name__}")
 
     @property
@@ -68,3 +82,10 @@ class MovingPlatform(BasicModel):
     @property
     def locks_arms_length(self):
         return self._locks_arms_length
+
+    def status(self):
+        status = f"{self.__class__.__name__} status:\n"
+        status += f"\ttruepos: {print_array_of_nums(self.get_true_pos())}\n"
+        status += f"\tframepos: {print_array_of_nums(self.get_pos())}\n"
+        return status
+
