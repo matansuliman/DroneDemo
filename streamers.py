@@ -15,10 +15,10 @@ class CameraStreamer(QObject):
     def __init__(self, simulation, update_rate= CONFIG["camera_streamer"]["fps"]):
         super().__init__()
         self._simulation = simulation
+        self._orchestrator = simulation._orchestrator
+
         self._update_rate = update_rate
         self._terminated = False
-        self._pause_event = threading.Event()
-        self._predictor = simulation.orchestrator.predictor
 
         self.width = CONFIG["camera_streamer"]["width"]
         self.height = CONFIG["camera_streamer"]["height"]
@@ -39,7 +39,7 @@ class CameraStreamer(QObject):
     def run(self):
         if not glfw.init():
             raise RuntimeError("GLFW could not be initialized")
-        
+
         glfw.window_hint(glfw.VISIBLE, glfw.FALSE)
         glfw.window_hint(glfw.SAMPLES, 4)
         offscreen_window = glfw.create_window(self.width, self.height, "", None, None)
@@ -47,9 +47,7 @@ class CameraStreamer(QObject):
         scene = mujoco.MjvScene(ENVIRONMENT.model, maxgeom=1000)
         context = mujoco.MjrContext(ENVIRONMENT.model, mujoco.mjtFontScale.mjFONTSCALE_150)
 
-        while not self._terminated:
-            if self._simulation.is_loop_state('pause'):
-                continue
+        while not self._terminated and self._simulation.is_loop_state('resume'):
 
             mujoco.mjv_updateScene(ENVIRONMENT.model, ENVIRONMENT.data, self.opt, None, self.cam, mujoco.mjtCatBit.mjCAT_ALL, scene)
 
@@ -59,7 +57,6 @@ class CameraStreamer(QObject):
             rgb_image = np.flip(rgb_buffer, axis=0)
             self.frame_ready.emit(rgb_image)
 
-            if self._predictor is not None:
-                self._predictor.model.detect(frame= rgb_image)
+            self._orchestrator.stream(frame= rgb_image)
 
             time.sleep(1.0 / self._update_rate)

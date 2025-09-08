@@ -4,11 +4,18 @@ import matplotlib.pyplot as plt
 from logger import LOGGER
 from config import CONFIG
 
+def plot_safe(ax, x, y, *args, **kwargs):
+    """plot but truncate to the shortest length"""
+    min_len = min(len(x), len(y))
+    ax.plot(x[:min_len], y[:min_len], *args, **kwargs)
+
 def plot_log(drone_log, platform_log, filename= CONFIG["plotter"]["path"]):
     fig, axs = plt.subplots(4, 3, figsize=(15, 6))
     axs = axs.flatten()
 
-    x_labels = ['x_true', 'y_true', 'z_true',
+    x_label = 'Time (sec)'
+
+    headlines = ['x_true', 'y_true', 'z_true',
                 'x', 'y', 'z',
                 'pitch', 'roll', 'yaw',
                 'pitch_cmd', 'roll_cmd', 'yaw_cmd']
@@ -18,15 +25,18 @@ def plot_log(drone_log, platform_log, filename= CONFIG["plotter"]["path"]):
                 'Radians', 'Radians', 'Radians',
                 'Radians', 'Radians', 'Radians']
 
-    for i, (x_label, y_label) in enumerate(zip(x_labels, y_labels)):
-        scale = 100 if i < 3 else 1
-        axs[i].plot(drone_log['time'], np.round(scale * np.array(drone_log[x_label]), 6), label='drone')
-        if x_label in platform_log:
-            axs[i].plot(platform_log['time'], np.round(scale * np.array(platform_log[x_label]), 6), '--', label='platform')
-        axs[i].set_title(f"{x_label.upper()} Position" if i < 3 else x_label.capitalize())
+    for i, (headline, y_label) in enumerate(zip(headlines, y_labels)):
+        scale = 100 if y_label == 'Centimeters' else 1
+        if headline in drone_log:
+            plot_safe(axs[i], drone_log[x_label], scale * np.array(drone_log[headline]), label='drone')
+        if headline in platform_log:
+            plot_safe(axs[i], platform_log[x_label], scale * np.array(platform_log[headline]), linestyle= 'dashed', label='platform')
+
+        # set text
+        axs[i].set_title(headline)
+        axs[i].set_xlabel(x_label)
         axs[i].set_ylabel(y_label)
-        if i >= 3:
-            axs[i].set_xlabel("Time (s)")
+
         axs[i].grid(True)
         axs[i].legend()
         axs[i].xaxis.set_major_formatter(plt.FuncFormatter(lambda val, _: f'{val:.2f}'))

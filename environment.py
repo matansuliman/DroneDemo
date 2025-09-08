@@ -308,6 +308,39 @@ class ENV:
         for name, val in values_by_name.items():
             self.set_ctrl(name, val)
 
+    def actuators_for_body(self, body: int | str):
+        """
+        Return actuator ids and names that act on the given body.
+        Works for JOINT-driven and SITE-driven actuators.
+        """
+        if isinstance(body, str):
+            body_id = self.body_id(body)
+        else:
+            body_id = int(body)
+
+        mdl = self._model
+        ids, names = [], []
+
+        for aid in range(mdl.nu):
+            trntype = int(mdl.actuator_trntype[aid])
+            idx0 = int(mdl.actuator_trnid[aid, 0])
+
+            # JOINT-driven
+            if trntype == mujoco.mjtTrn.mjTRN_JOINT:
+                if 0 <= idx0 < mdl.njnt and mdl.jnt_bodyid[idx0] == body_id:
+                    ids.append(aid)
+                    names.append(mdl.actuator(aid).name)
+                continue
+
+            # SITE-driven (e.g. quadrotor motors)
+            if trntype == mujoco.mjtTrn.mjTRN_SITE:
+                if 0 <= idx0 < mdl.nsite and mdl.site_bodyid[idx0] == body_id:
+                    ids.append(aid)
+                    names.append(mdl.actuator(aid).name)
+                continue
+
+        return ids, names
+
     # -------------------- Convenience: quick “hover” gravity tweak --------------------
     def set_gravity_scale(self, scale: float):
         """Scale current gravity vector magnitude by 'scale' (sign preserved)."""

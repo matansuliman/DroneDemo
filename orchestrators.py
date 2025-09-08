@@ -30,19 +30,19 @@ class Follow(BasicOrchestrator):
     def __init__(self):
         super().__init__()
 
+        self._viewer = ENVIRONMENT.launch_viewer()
+
         # Initialize objects
         quadrotor = Quadrotor()
         pad = Pad()
         self._objects = {
-            'viewer': ENVIRONMENT.launch_viewer(),
             'Quadrotor': quadrotor,
             'Pad': pad,
             'Quadrotor_controller': QuadrotorController(quadrotor= quadrotor),
             'Pad_controller': PadController(pad= pad)
         }
 
-        v = self._objects['viewer']
-        v.opt.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT] = True
+        self._viewer.opt.flags[mujoco.mjtVisFlag.mjVIS_CONTACTPOINT] = True
 
         # Initialize params
         self._scene_ended = False
@@ -54,11 +54,9 @@ class Follow(BasicOrchestrator):
         ENVIRONMENT.set_wind(velocity_world= config_env["default_wind"], air_density= config_env["air_density"])
 
         # Initialize camera view
-        self._update_camera_viewer()
+        self._update_viewer_camera()
 
         LOGGER.info(f"\t\tOrchestrator: Initiated {self.__class__.__name__}")
-
-
     
     @property
     def predictor(self):
@@ -68,65 +66,62 @@ class Follow(BasicOrchestrator):
     def scene_ended(self):
         return self._scene_ended
 
-    @predictor.setter
-    def predictor(self, predictor):
-        self._predictor = predictor
-
-    def _update_camera_viewer(self):
+    def _update_viewer_camera(self):
         drone_pos = self._objects['Quadrotor'].get_true_pos()
         pad_pos = self._objects['Pad'].get_true_pos()
-        avg_pos = np.average([drone_pos[:3], pad_pos[:3]], axis=0)
-        #self._objects['viewer'].cam.distance = CONFIG["Follow_Orch"]["viewer"]["camera_distance_coef"] * avg_pos[2] + CONFIG["Follow_Orch"]["viewer"]["camera_distance_ff"]
-        self._objects['viewer'].cam.lookat[:] = drone_pos # avg_pos
+        avg_pos = np.average([drone_pos, pad_pos], axis=0)
 
-    def can_land(self):
-        if self.objects['Quadrotor_controller'].descending: return False
-        if not self._predictor.model.is_stable(mode= 'short-term'): return False
-        return np.linalg.norm(self._predictor.model.get_last()) < self._objects["Pad"].radius
+        self._viewer.cam.distance = CONFIG["Follow_Orch"]["viewer"]["camera_distance_coef"] * avg_pos[2] + CONFIG["Follow_Orch"]["viewer"]["camera_distance_ff"]
+        self._viewer.cam.lookat[:] = avg_pos
+        self._viewer.cam.azimuth = 90
+        self._viewer.cam.elevation = -45
 
-    def _pad_can_catch_drone(self):
-        return self._objects['Quadrotor'].sensors['rangefinder'].get() < self._objects['Pad'].locks_arms_length
+    def _drone_above_pad(self):
+        q, p, _, _ = self._objects.values()
+        curr_height = q.get_height()
+        norm_from_center = np.linalg.norm(self._predictor.get_last_from_model())
+        return norm_from_center < p.radius
 
-    def _results(self, status: str= 'SUCCESS'):
-        abs_dis_from_center = abs(self._objects['Pad'].locks_end_pos)
-        radius = self._objects["Pad"].radius
-        precent = lambda whole, part: 100 * (1 - part/whole)
-        accuracy = precent(radius, abs_dis_from_center)
-        return f" *** {status} ***\tAccuracy[x,y]: {accuracy}%"
+    def _can_land(self):
+        stable_short_term = self._predictor.is_model_stable(mode= 'short-term')
+        return stable_short_term and self._drone_above_pad()
 
     def status(self):
-        status = f"{self.__class__.__name__} status:\n"
+        status = "" #f"{self.__class__.__name__} status:\n"
         status += self._predictor.status()
-        status += self._objects['Quadrotor_controller'].status()
-        status += self._objects['Quadrotor'].status()
-        status += self._objects['Pad_controller'].status()
-        status += self._objects['Pad'].status()
-        if self._scene_ended: status += f"results: {self._results()}"
+        for obj in self._objects.values(): status += obj.status()
+        #status += f"{self._predictor.is_model_stable(mode= 'short-term')}\n"
+        #status += f"{self._drone_above_pad()}\n"
         return status
-        
-    def step_scene(self):
-        self._objects['Pad_controller'].step() # step pad
-        
-        """# step drone
-        if self._objects['Pad_controller'].locks_activated:
-            pad_pos = self._objects['Pad'].get_true_pos()
-            rel_pos = np.append(self._objects['Pad'].locks_end_pos, 0)
-            self._objects['Quadrotor_controller'].teleport(pos= pad_pos + rel_pos)
-            self._scene_ended = True
 
-        elif self._pad_can_catch_drone():
-            drone_pos = self._objects['Quadrotor'].get_true_pos()
-            pad_pos = self._objects['Pad'].get_true_pos()
-            rel_pos = drone_pos - pad_pos
-            self._objects['Pad_controller'].activate_locks(pos= rel_pos[:2])
+    def stream(self, frame):
+        curr_height = self._objects['Quadrotor'].get_height()
+        self._predictor.stream_to_model(frame= frame, curr_height= curr_height)
 
-        else:"""
-        new_reference_pos = self._objects['Pad'].get_pos()
-        new_reference_vel = self._objects['Pad_controller'].velocity
+    def _step_predictor(self):
+        #if not qc.descend: self._predictor.predict(curr_height= q.get_height())
+        curr_height = self._objects['Quadrotor'].get_height()
         self._predictor.predict()
-        new_reference_pos += self._predictor.prediction # use predicator
-        self._objects['Quadrotor_controller'].set_reference(pos= new_reference_pos, vel= new_reference_vel)
-        self._objects['Quadrotor_controller'].step()
 
-        self._update_camera_viewer() # step camera view
-        self._objects['viewer'].sync() # sync viewer
+    def _step_pad(self):
+        self._objects['Pad_controller'].step()
+
+    def _step_drone(self):
+        _, p, qc, pc = self._objects.values()
+
+        qc.descend = self._can_land()
+        new_ref_pos, new_ref_vel = p.get_pos(), pc.velocity
+
+        new_ref_pos += self._predictor.prediction  # use predicator
+        qc.set_reference(pos=new_ref_pos, vel=new_ref_vel)
+        qc.step()
+
+    def _step_viewer(self):
+        self._update_viewer_camera()  # step camera view
+        self._viewer.sync()  # sync viewer
+
+    def step_scene(self):
+        self._step_predictor()
+        self._step_pad()
+        self._step_drone()
+        self._step_viewer()

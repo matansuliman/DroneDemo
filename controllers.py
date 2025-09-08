@@ -35,7 +35,7 @@ class QuadrotorController(BasicController):
         super().__init__(plant= quadrotor)
 
         self._log = {
-            'time': [],
+            'Time (sec)': [],
             'x_true': [], 'y_true': [], 'z_true': [],
             'x': [], 'y': [], 'z': [],
             'roll': [], 'pitch': [], 'yaw': [],
@@ -45,8 +45,8 @@ class QuadrotorController(BasicController):
         conf_pid = CONFIG["QuadrotorController"]["pids"]
         self._pids = {
             'x':     PID(Kp= conf_pid["x"]["kp"], Kd= conf_pid["x"]["kd"], setpoint=conf_pid["x"]["setpoint"], output_limits=sym_limits(conf_pid["x"]["output_limit"])),
-            'y':     PID(Kp= conf_pid["y"]["kp"], Kd= conf_pid["x"]["kd"], setpoint=conf_pid["x"]["setpoint"], output_limits=sym_limits(conf_pid["x"]["output_limit"])),
-            'z':     PID(Kp= conf_pid["z"]["kp"], Kd= conf_pid["x"]["kd"], setpoint=conf_pid["x"]["setpoint"], output_limits=sym_limits(conf_pid["x"]["output_limit"])),
+            'y':     PID(Kp= conf_pid["y"]["kp"], Kd= conf_pid["y"]["kd"], setpoint=conf_pid["y"]["setpoint"], output_limits=sym_limits(conf_pid["y"]["output_limit"])),
+            'z':     PID(Kp= conf_pid["z"]["kp"], Kd= conf_pid["z"]["kd"], setpoint=conf_pid["z"]["setpoint"], output_limits=sym_limits(conf_pid["z"]["output_limit"])),
             'roll':  PID(Kp= conf_pid["ro"]["kp"], Kd= conf_pid["ro"]["kd"], setpoint=conf_pid["ro"]["setpoint"], output_limits=sym_limits(conf_pid["ro"]["output_limit"])),
             'pitch': PID(Kp= conf_pid["pi"]["kp"], Kd= conf_pid["pi"]["kd"], setpoint=conf_pid["pi"]["setpoint"], output_limits=sym_limits(conf_pid["pi"]["output_limit"])),
             'yaw':   PID(Kp= conf_pid["ya"]["kp"], Kd= conf_pid["ya"]["kd"], setpoint=conf_pid["ya"]["setpoint"], output_limits=sym_limits(conf_pid["ya"]["output_limit"])),
@@ -61,24 +61,19 @@ class QuadrotorController(BasicController):
         }
 
         self._reference = None
-
-        self._descending = False
+        self._descend = False
         descend_phases = CONFIG["QuadrotorController"]["descend_phases"]
         self._descend_phases = list(zip(descend_phases["names"], descend_phases["ff_z"], descend_phases["pid_z_ul"], descend_phases["pid_z_ll"]))
 
         LOGGER.info(f"\t\t\tController: Initiated {self.__class__.__name__}")
 
     @property
-    def descending(self):
-        return self._descending
-
     def descend(self):
-        self._descending = True
-        LOGGER.debug("QuadrotorController: descending")
+        return self._descend
 
-    def teleport(self, pos):
-        ENVIRONMENT.set_free_body_pose(self._plant.xml_name, pos_world= pos, quat_wxyz= [1, 0, 0, 0])
-        ENVIRONMENT.set_free_body_velocity(self._plant.xml_name, linvel_world= [0, 0, 0], angvel_world= [0, 0, 0])
+    @descend.setter
+    def descend(self, value):
+        self._descend = value
 
     def set_reference(self, pos, vel):
         self._reference = (pos, vel)
@@ -150,9 +145,6 @@ class QuadrotorController(BasicController):
             'thrust3': thrusts[2],
             'thrust4': thrusts[3],
         }
-
-        #print(values)
-
         ENVIRONMENT.set_ctrls(values)
 
     def _get_phase(self):
@@ -162,61 +154,61 @@ class QuadrotorController(BasicController):
             if val > ff_z + epsilon:
                 return name, ff_z, pid_z_ul, pid_z_ll
 
-        return 'clear_all', 0, 0, 0
+        return 'turn_off', 0, 0, 0
+
+    def _get_phase_name(self):
+        return self._get_phase()[0]
 
     def _enforce_descend(self):
         _, ff_z, pid_z_ul, pid_z_ll = self._get_phase()
         self._ff['z'] = ff_z
         self._pids['z'].output_limits = pid_z_ll, pid_z_ul
 
+    def _enforce_hover(self):
+        self._ff['z'] = CONFIG["QuadrotorController"]["ff"]["z"]
+        self._pids['z'].output_limits = sym_limits(CONFIG["QuadrotorController"]["pids"]["z"]["output_limit"])
+
+    def _turn_off_plant(self):
+        ENVIRONMENT.set_ctrls({name: 0.0 for name in self._plant.actuator_names})
+
     def status(self):
-        status = f"{self.__class__.__name__} status:\n"
-        status += f"\treference_pos: {print_array_of_nums(self.get_reference()[0])}\n"
-        status += f"\treference_vel: {print_array_of_nums(self.get_reference()[1])}\n"
-        if self._descending: status += f"\tdescend_phase: {self._get_phase()[0]}\n"
+        status = f"{self.__class__.__name__} status:"
+        status += f"\treference_pos: {print_array_of_nums(self.get_reference()[0])}"
+        status += f"\treference_vel: {print_array_of_nums(self.get_reference()[1])}"
+        if self._descend: status += f"\tdescend_phase: {self._get_phase()[0]}"
+        status += "\n"
         return status
 
+    def is_done(self):
+        return self._get_phase_name() == 'turn_off'
+
     def step(self):
-        # Enforce descend
-        if self._descending: self._enforce_descend()
+        # Enforce turn off
+        if self.is_done():
+            self._turn_off_plant()
 
-        if self._get_phase()[0] in ['clear_all']:
-            ENVIRONMENT.data.ctrl[:] = 0
-            ENVIRONMENT.data.act[:] = 0
-            return
+        else:
+            # Enforce descend or hover
+            self._enforce_descend() if self._descend else self._enforce_hover()
 
-        # Outer loop position control -> throttle
-        # Inner loop orientation control -> (roll_cmd, pitch_cmd, yaw_cmd)
-        # Apply control signals to actuators
-        self._log['time'].append(ENVIRONMENT.get_time())  # Log
-        self._apply_cmds(self._outer_loop(), *self._inner_loop())
+            # Outer loop position control -> throttle
+            # Inner loop orientation control -> (roll_cmd, pitch_cmd, yaw_cmd)
+            # Apply control signals to actuators
+            self._log['Time (sec)'].append(ENVIRONMENT.get_time())  # Log
+            self._apply_cmds(self._outer_loop(), *self._inner_loop())
 
 
 class PadController(BasicController):
     def __init__(self, pad):
         super().__init__(plant= pad)
-
-        self._velocity = np.array(CONFIG["Pad"]["default_velocity"], dtype=np.float64)
-        self._locks_activated = False
+        self._velocity = np.array(CONFIG["Pad"]["default_velocity"], dtype= np.float64)
 
         self._log = {
-            'time': [],
+            'Time (sec)': [],
             'x_true': [], 'y_true': [], 'z_true': [],
             'x': [], 'y': [], 'z': [],
         }
         LOGGER.info(f"\t\t\tPadController: Initiated {self.__class__.__name__}")
-
-    @property
-    def locks_activated(self):
-        return self._locks_activated
-
-    def activate_locks(self, pos):
-        self._locks_activated = True
-        self._plant.locks_end_pos = pos
-        LOGGER.debug("PadController: activating locks")
-
-    def deactivate_locks(self):
-        self._locks_activated = False
 
     @property
     def velocity(self):
@@ -224,23 +216,21 @@ class PadController(BasicController):
 
     @velocity.setter
     def velocity(self, velocity):
-        self._velocity = np.array(velocity, dtype=np.float64)
+        self._velocity = np.array(velocity, dtype= np.float64)
 
     def status(self):
-        status = f"{self.__class__.__name__} status:\n"
-        status += f"\tvel: {self.velocity}\n"
-        status += f"\tlocks_activated: {self._locks_activated}\n"
+        status = f"{self.__class__.__name__} status:\t"
+        status += f"\tvel: {print_array_of_nums(self.velocity)}\n"
         return status
 
     def step(self):
-        # Update position based on velocity
-        pos_true = self._plant.get_true_pos()
-        new_pos = pos_true + self._velocity * ENVIRONMENT.dt
-        ENVIRONMENT.set_joint_qpos(self._plant.joint_x_name, float(new_pos[0]))
-        ENVIRONMENT.set_joint_qpos(self._plant.joint_y_name, float(new_pos[1]))
+        # Update velocity
+        ENVIRONMENT.set_joint_qvel(self._plant.joint_x_name, float(self._velocity[0]))
+        ENVIRONMENT.set_joint_qvel(self._plant.joint_y_name, float(self._velocity[1]))
 
         # Logging
-        self._log['time'].append(ENVIRONMENT.get_time())
+        self._log['Time (sec)'].append(ENVIRONMENT.get_time())
+        pos_true = self._plant.get_true_pos()
         self._log['x_true'].append(pos_true[0])
         self._log['y_true'].append(pos_true[1])
         self._log['z_true'].append(pos_true[2])

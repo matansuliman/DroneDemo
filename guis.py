@@ -59,11 +59,6 @@ class GUI(QWidget):
         self.terminate_btn.clicked.connect(self._on_terminate)
         buttons.addWidget(self.terminate_btn)
 
-        self.land_btn = QtWidgets.QPushButton("Land")
-        self.land_btn.setStyleSheet("background:#11b; color:black; font-weight:bold;")
-        self.land_btn.clicked.connect(self._on_land)
-        buttons.addWidget(self.land_btn)
-
         # Pack groups + buttons
         groups_row = QtWidgets.QHBoxLayout()
         groups_row.addWidget(vel_box, stretch=1)
@@ -75,7 +70,6 @@ class GUI(QWidget):
         # Keep pause label synced; if landing is active, re-apply landing target
         self.timer = QtCore.QTimer(self)
         self.timer.timeout.connect(self._sync_pause_label)
-        self.timer.timeout.connect(self._sync_land_btn)
         self.timer.start(100)
 
         LOGGER.info(f"\tGUI: Initiated {self.__class__.__name__}")
@@ -151,24 +145,10 @@ class GUI(QWidget):
         if self.pause_btn.text() != want:
             self.pause_btn.setText(want)
 
-    def _sync_land_btn(self):
-        if self.simulation.orchestrator.can_land():
-            self.land_btn.setStyleSheet("background:#11b; color:black; font-weight:bold;")
-            self.land_btn.setEnabled(True)
-        else:
-            self.land_btn.setStyleSheet("background:#d00; color:white; font-weight:bold;")
-            self.land_btn.setEnabled(False)
-
     def _on_terminate(self):
         LOGGER.debug("GUI: pressed terminate")
         self.simulation.terminate()
         QtCore.QTimer.singleShot(200, QApplication.quit)
-
-    def _on_land(self):
-        LOGGER.debug("GUI: pressed land")
-        self.objects['Quadrotor_controller'].descend()
-        self.land_btn.setStyleSheet("background:#d00; color:white; font-weight:bold;")
-        self.land_btn.setEnabled(False)
 
     def closeEvent(self, event):
         # Ensure camera thread halts on close

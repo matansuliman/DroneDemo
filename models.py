@@ -10,7 +10,8 @@ class BasicModel:
     def __init__(self, child_class_name, xml_name):
         self._xml_name = xml_name
         self._body_id = ENVIRONMENT.body_id(xml_name)
-        self._sensors = {'framepos': GPS(sensor_name= CONFIG[child_class_name]["sensors"]["framepos"])}
+        self._sensors = dict()
+        self._sensors['framepos'] = GPS(sensor_name= CONFIG[child_class_name]["sensors"]["framepos"])
         ENVIRONMENT.set_body_cda(body= self._xml_name, cda= CONFIG[child_class_name]["cda"])
 
     @property
@@ -39,13 +40,26 @@ class Quadrotor(BasicModel):
     def __init__(self):
         super().__init__(child_class_name= self.__class__.__name__, xml_name= CONFIG["Quadrotor"]["xml_body_name"])
         self._sensors["rangefinder"] = Rangefinder(sensor_name= CONFIG["Quadrotor"]["sensors"]["rangefinder"])
+        self._actuator_ids, self._actuator_names = ENVIRONMENT.actuators_for_body(self._body_id)
         LOGGER.info(f"\t\t\tModel: Initiated {self.__class__.__name__}")
 
+    @property
+    def actuator_ids(self):
+        return self._actuator_ids
+
+    @property
+    def actuator_names(self):
+        return self._actuator_names
+
+    def get_height(self):
+        return self._sensors['rangefinder'].get()
+
     def status(self):
-        status = f"{self.__class__.__name__} status:\n"
-        status += f"\ttruepos: {print_array_of_nums(self.get_true_pos())}\n"
-        status += f"\tframepos: {print_array_of_nums(self.get_pos())}\n"
-        status += f"\trangefinder: {print_array_of_nums(self.sensors['rangefinder'].get())}\n"
+        status = f"{self.__class__.__name__} status:"
+        #status += f"\ttruepos: {print_array_of_nums(self.get_true_pos())}\n"
+        for sensor_name, sensor_obj in self._sensors.items():
+            status += f"\t{sensor_name}: {print_array_of_nums(sensor_obj.get())}"
+        status += "\n"
         return status
 
 
@@ -55,8 +69,6 @@ class Pad(BasicModel):
         self._radius = CONFIG["Pad"]["radius"]
         self._joint_x_name = 'Pad_joint_x'
         self._joint_y_name = 'Pad_joint_y'
-        self._locks_end_pos = None
-        self._locks_arms_length = CONFIG["Pad"]["locks_arms_length"]
         LOGGER.info(f"\t\t\tModel: Initiated {self.__class__.__name__}")
 
     @property
@@ -71,21 +83,11 @@ class Pad(BasicModel):
     def joint_y_name(self):
         return self._joint_y_name
 
-    @property
-    def locks_end_pos(self):
-        return self._locks_end_pos
-
-    @locks_end_pos.setter
-    def locks_end_pos(self, value):
-        self._locks_end_pos = value
-
-    @property
-    def locks_arms_length(self):
-        return self._locks_arms_length
-
     def status(self):
-        status = f"{self.__class__.__name__} status:\n"
-        status += f"\ttruepos: {print_array_of_nums(self.get_true_pos())}\n"
-        status += f"\tframepos: {print_array_of_nums(self.get_pos())}\n"
+        status = f"{self.__class__.__name__} status:"
+        #status += f"\ttruepos: {print_array_of_nums(self.get_true_pos())}\n"
+        for sensor_name, sensor_obj in self._sensors.items():
+            status += f"\t{sensor_name}: {print_array_of_nums(sensor_obj.get())}"
+        status += "\n"
         return status
 

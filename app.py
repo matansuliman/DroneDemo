@@ -16,9 +16,9 @@ class App:
     def __init__(self):
         LOGGER.info("App: Initiating")
         self._app = QApplication(sys.argv)
-        self._simulation = SimulationRunner(orchestrator=Follow)
-        self._camera_streamer = CameraStreamer(simulation=self._simulation)
-        self._gui = GUI(simulation= self._simulation, camera_streamer=self._camera_streamer)
+        self._simulation = SimulationRunner(orchestrator= Follow)
+        self._camera_streamer = CameraStreamer(simulation= self._simulation)
+        self._gui = GUI(simulation= self._simulation, camera_streamer= self._camera_streamer)
         LOGGER.info("App: Initiated")
 
     

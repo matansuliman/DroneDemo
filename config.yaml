@@ -24,14 +24,13 @@ Pad:
   sensors:
     framepos: Pad_framepos
   radius: 1
-  locks_arms_length: 0.03
   default_velocity: [0, 0, 0]
 
 
 Follow_Orch:
   viewer:
-    camera_distance_coef: 1.5
-    camera_distance_ff: 8
+    camera_distance_coef: 3
+    camera_distance_ff: 1.5
   env:
     default_wind: [0, 0, 0]
     air_density: 1.225
@@ -40,14 +39,18 @@ Predictor:
 
 Detector:
   history_max_len: 200
+  round_precision: 10
+  px_to_meter: 0.0333
   tol_stddev: 0.1
-  px_to_meter: 0.03448275862
+  height_trained: 10
+  image_size_trained: [320, 240]
+  short_term_length: 20
 
 QuadrotorController:
   descend_phases:
     names: ['fast-drop', 'approach', 'touchdown']
-    ff_z:     [3, 0.5, 0.02]
-    pid_z_ul: [0.1, 0.1, 0.1]
+    ff_z:     [3, 0.5, 0.07]
+    pid_z_ul: [0.1, 0.1, 0.01]
     pid_z_ll: [-0.1, -0.05, -0.005]
 
   pids:
@@ -63,9 +66,9 @@ QuadrotorController:
       output_limit: 0.03
     z:
       kp: 0.15
-      kd: 0.60
+      kd: 0.55
       setpoint: 0
-      output_limit: 0.8
+      output_limit: 0.08
     ro:
       kp: 0.50
       kd: 0.30
@@ -98,9 +101,7 @@ QuadrotorController:
     ]
 
 
-
-
 camera_streamer:
-  fps: 60
-  width: 320
-  height: 240
+  fps: 120
+  width: 480
+  height: 360

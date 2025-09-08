@@ -55,12 +55,18 @@ class SimulationRunner(QObject, BasicSimulationRunner):
         LOGGER.debug("Simulation: Resume")
 
     def status(self):
-        status = f"{self.__class__.__name__} status:\n"
-        return status + self.orchestrator.status()
+        status = "" #f"{self.__class__.__name__} status:\n"
+        status += self.orchestrator.status()
+        return status
+
+    def _continue(self):
+        return (not self.is_loop_state('terminate') and
+               self._pause_event.wait())
 
     def run(self):
         LOGGER.debug("Simulation: Running")
-        while not self.is_loop_state('terminate') and self._pause_event.wait():
+
+        while self._continue():
             self._orchestrator.step_scene()  # advance scene
             self.status_ready.emit(self.status()) # emit status
             ENVIRONMENT.step()  # advance physics

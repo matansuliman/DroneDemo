@@ -1,10 +1,9 @@
-import time
 import cv2
 import numpy as np
 from collections import deque
 from PySide6.QtCore import QObject
 
-from detecrors import ArUcoMarkerDetector
+from detectors import ArUcoMarkerDetector
 
 from environment import ENVIRONMENT
 from logger import LOGGER
@@ -46,7 +45,7 @@ class BasicPredictor:
     def status(self):
         raise NotImplementedError("Subclasses should implement this method")
 
-    def predict(self):
+    def predict(self, coef):
         raise NotImplementedError("Subclasses should implement this method")
 
 
@@ -55,6 +54,12 @@ class ArUcoMarkerPredictor(BasicPredictor):
         super().__init__(model= ArUcoMarkerDetector)
         LOGGER.info(f"\t\t\tPredictor: Initiated {self.__class__.__name__}")
 
+    def is_model_stable(self, mode= 'long-term'):
+        return self._model.is_stable(mode= mode)
+
+    def stream_to_model(self, frame, curr_height):
+        self.model.detect(frame, curr_height)
+
     def status(self):
         status = f"{self.__class__.__name__} status:\n"
         status += f"model: {self._model.status()}"
@@ -62,13 +67,19 @@ class ArUcoMarkerPredictor(BasicPredictor):
         status += f"\taccumulated prediction: {self._prediction}\n"
         return status
 
+    def get_last_from_model(self):
+        return self._model.get_last()
+
     def predict(self):
-        if self._model.is_full() and self._model.is_stable():
+        if self._model.is_full() and self.is_model_stable():
             LOGGER.debug("Predictor: model is full and stable")
             LOGGER.debug("Predictor: predicting")
 
             # calculate mean of model history and add dim
-            pred = np.append(np.mean(self._model.history, axis= 0), 0)
+            mean_history = np.append(np.mean(self._model.history, axis= 0), 0)
+
+            # apply coef to mean
+            pred = mean_history
 
             self._prediction += pred
             self._history.append(self._prediction)
