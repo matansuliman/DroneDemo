@@ -12,7 +12,7 @@ def print_num(x, precision= 2):
 
 def print_array_of_nums(arr, precision= 2):
     try:
-        return ', '.join([print_num(x, precision) for x in arr])
+        return '  '.join([print_num(x, precision) for x in arr])
     except Exception as e:
         return ''
 
