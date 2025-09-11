@@ -3,15 +3,14 @@
   <asset>
     <texture name="donut_tex" type="2d" file="donut_with_markers.png"/>
     <material name="donut_material" texture="donut_tex" texrepeat="1 1" texuniform="true"/>
-      <mesh name="ring_wall_mesh" file="ring_wall.obj" scale="1 1 1"/>
   </asset>
 
   <worldbody>
-    <body name="Pad" pos="0 0 0.1">
+    <body name="Pad" pos="0 0 1">
       <joint name="Pad_joint_x" type="slide" axis="1 0 0" damping="5"/>
       <joint name="Pad_joint_y" type="slide" axis="0 1 0" damping="5"/>
 
-        <geom name="donut_platform" type="cylinder" size="1.0 0.08"
+        <geom name="donut_platform" type="cylinder" size="1.0 0.01"
               friction="3.0 2.0 0.1"
               margin="0.01"
               condim="6"
@@ -20,12 +19,18 @@
               material="donut_material" rgba="1 1 1 1"/>
 
       <site name="Pad_site_gps" pos="0 0 0.03" size="0.002"/>
+      <site name="Pad_site_touch" pos="0 0 0.011" size="0.005"/>
     </body>
   </worldbody>
 
   <sensor>
     <framepos    name="Pad_framepos"    objtype="site" objname="Pad_site_gps"/>
     <velocimeter name="Pad_velocimeter" site="Pad_site_gps"/>
+  </sensor>
+
+
+  <sensor>
+    <touch name="Pad_touch" site="Pad_site_touch"/>
   </sensor>
 
 </mujoco>

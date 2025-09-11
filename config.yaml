@@ -7,14 +7,18 @@ logger:
   datefmt: "%Y-%m-%d %H:%M:%S"
 
 plotter:
-  path: output_plot.png
+  ext: png
 
 
 Quadrotor:
   xml_body_name: Quadrotor
   cda: 0.04
   sensors:
-    framepos: Quadrotor_framepos
+    pos: Quadrotor_framepos
+    vel: Quadrotor_velocimeter
+    framequat: Quadrotor_framequat
+    gyro: Quadrotor_gyro
+    accelerometer: Quadrotor_accelerometer
     rangefinder: Quadrotor_rangefinder
 
 
@@ -22,7 +26,9 @@ Pad:
   xml_body_name: Pad
   cda: 0.25
   sensors:
-    framepos: Pad_framepos
+    pos: Pad_framepos
+    vel: Pad_velocimeter
+    touch: Pad_touch
   radius: 1
   default_velocity: [0, 0, 0]
 
@@ -41,44 +47,51 @@ Detector:
   history_max_len: 200
   round_precision: 10
   px_to_meter: 0.0333
-  tol_stddev: 0.1
   height_trained: 10
   image_size_trained: [320, 240]
-  short_term_length: 20
+
+
+  tol_stddev: 0.1
+  long_term_len: 200
+  short_term_len: 20
 
 QuadrotorController:
+  outer_loop:
+    hz: 20
+
   descend_phases:
     names: ['fast-drop', 'approach', 'touchdown']
-    ff_z:     [3, 0.5, 0.07]
-    pid_z_ul: [0.1, 0.1, 0.01]
-    pid_z_ll: [-0.1, -0.05, -0.005]
+    ff_z:     [3, 0.5, 0]
+    pid_z_ul: [0.1, 0.1, 0.1]
+    pid_z_ll: [-0.3, -0.05, -0.005]
+    epsilon: [0.1, 0.05, 0.05]
 
   pids:
     x:
       kp: 0.15
       kd: 0.4
       setpoint: 0
-      output_limit: 0.03
+      output_limit: 0.2
     y:
       kp: 0.15
       kd: 0.4
       setpoint: 0
-      output_limit: 0.03
+      output_limit: 0.2
     z:
       kp: 0.15
       kd: 0.55
       setpoint: 0
-      output_limit: 0.08
+      output_limit: 0.2
     ro:
       kp: 0.50
       kd: 0.30
       setpoint: 0
-      output_limit: 0.05
+      output_limit: 0.1
     pi:
       kp: 0.50
       kd: 0.20
       setpoint: 0
-      output_limit: 0.05
+      output_limit: 0.1
     ya:
       kp: 0.50
       kd: 0.50
@@ -102,6 +115,63 @@ QuadrotorController:
 
 
 camera_streamer:
-  fps: 120
-  width: 480
-  height: 360
+  resolutions:
+    high: [640, 480]
+    low: [320, 240]
+  fps: 30
+
+
+Noises:
+  Pos:
+    scale: 1
+    offset:
+      mean: 0
+      std: 2
+      low: -1.5
+      high: 1.5
+    drift_rate: 0
+
+  Vel:
+    scale: 1
+    offset:
+      mean: 0
+      std: 0
+      low: 0
+      high: 0
+    drift_rate: 0
+
+  Quat:
+    scale: 1
+    offset:
+      mean: 0
+      std: 0
+      low: 0
+      high: 0
+    drift_rate: 0
+
+  Gyro:
+    scale: 1
+    offset:
+      mean: 0
+      std: 0
+      low: 0
+      high: 0
+    drift_rate: 0
+
+  Accelerometer:
+    scale: 1
+    offset:
+      mean: 0
+      std: 0
+      low: 0
+      high: 0
+    drift_rate: 0
+
+  Rangefinder:
+    scale: 1
+    offset:
+      mean: 0
+      std: 0
+      low: 0
+      high: 0
+    drift_rate: 0

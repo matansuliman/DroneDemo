@@ -4,86 +4,94 @@ from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QApplication, QWidget
 
 from environment import ENVIRONMENT
+from helpers import print_array_of_nums
 from logger import LOGGER
 from config import CONFIG
 
 
 class GUI(QWidget):
-    def __init__(self, simulation, camera_streamer):
+    def __init__(self, simulation):
         super().__init__()
-        self.simulation = simulation
-        self.objects = simulation.orchestrator.objects
+        self._simulation = simulation
 
-        self.camera_streamer = camera_streamer
-        self.landing_active = False
-        self.is_paused = False
-
-        self.setWindowTitle(f'{self.__class__.__name__}')
+        self.setWindowTitle(f'{self.__class__.__name__} connected to {simulation.__class__.__name__}')
         self.setGeometry(0, 0, 500, 500)
 
-        # ============ ROOT LAYOUT ============
+        # ============ ROOT ============
         root = QtWidgets.QVBoxLayout(self)
 
-        self.simulation_data_label = QtWidgets.QLabel("")
-        root.addWidget(self.simulation_data_label)
+        # ============ LABELS ============
+        # camera streamer status
+        self._camera_streamer_status = QtWidgets.QLabel("")
+        root.addWidget(self._camera_streamer_status)
 
-        # ============ CAMERA ============
-        self.camera_label = QtWidgets.QLabel()
-        self.camera_label.setStyleSheet("background:#000;")
-        root.addWidget(self.camera_label, alignment=QtCore.Qt.AlignCenter)
+        # simulation status
+        self._simulation_status = QtWidgets.QLabel("")
+        root.addWidget(self._simulation_status)
 
-        # ============ CONTROLS STRIP ============
-        # Velocity sliders (platform Vx, Vy)
+        # camera streamer view
+        self._camera_streamer_frame = QtWidgets.QLabel()
+        root.addWidget(self._camera_streamer_frame, alignment= QtCore.Qt.AlignCenter)
+
+        # ============ CONTROLS ============
+        sliders_row = QtWidgets.QHBoxLayout()
+
+        # pad vx, vy sliders
         vel_box = self._group("Platform Velocity (m/s)")
-        self.vel_x = self._create_slider(-5.0, 5.0, self.objects['Pad_controller'].velocity[0],
-                                         "Vx", on_change=self._apply_velocity, step=0.1)
-        self.vel_y = self._create_slider(-5.0, 5.0, self.objects['Pad_controller'].velocity[1],
-                                         "Vy", on_change=self._apply_velocity, step=0.1)
-        vel_box.layout().addLayout(self.vel_x['layout'])
-        vel_box.layout().addLayout(self.vel_y['layout'])
 
-        # Wind sliders (world Vx, Vy) — sliders as requested
-        wind_box = self._group("Wind (world, m/s)")
-        self.wind_x = self._create_slider(-10.0, 10.0, 0.0, "Wind Vx", on_change=self._apply_wind, step=0.1)
-        self.wind_y = self._create_slider(-10.0, 10.0, 0.0, "Wind Vy", on_change=self._apply_wind, step=0.1)
-        wind_box.layout().addLayout(self.wind_x['layout'])
-        wind_box.layout().addLayout(self.wind_y['layout'])
+        self._pad_vel_x = self._create_slider(-5.0, 5.0, self._simulation.get_pad_vel()[0], "Vx", on_change= self._set_pad_vel, step= 0.1)
+        vel_box.layout().addLayout(self._pad_vel_x['layout'])
 
-        # Buttons row: Pause/Resume, Terminate, Land
-        buttons = QtWidgets.QHBoxLayout()
-        self.pause_btn = QtWidgets.QPushButton("Resume")
-        self.pause_btn.clicked.connect(self.toggle_pause_resume)
-        buttons.addWidget(self.pause_btn)
+        self._pad_vel_y = self._create_slider(-5.0, 5.0, self._simulation.get_pad_vel()[0], "Vy", on_change= self._set_pad_vel, step= 0.1)
+        vel_box.layout().addLayout(self._pad_vel_y['layout'])
 
-        self.terminate_btn = QtWidgets.QPushButton("Terminate")
-        self.terminate_btn.clicked.connect(self._on_terminate)
-        buttons.addWidget(self.terminate_btn)
+        sliders_row.addWidget(vel_box, stretch=1)
 
-        # Pack groups + buttons
-        groups_row = QtWidgets.QHBoxLayout()
-        groups_row.addWidget(vel_box, stretch=1)
-        groups_row.addWidget(wind_box, stretch=1)
-        root.addLayout(groups_row)
-        root.addLayout(buttons)
+        # wind (world) vx, vy sliders
+        wind_box = self._group("Wind (World, m/s)")
+
+        self._wind_x = self._create_slider(-10.0, 10.0, 0.0, "Wind Vx", on_change=self._set_wind, step=0.1)
+        wind_box.layout().addLayout(self._wind_x['layout'])
+
+        self._wind_y = self._create_slider(-10.0, 10.0, 0.0, "Wind Vy", on_change=self._set_wind, step=0.1)
+        wind_box.layout().addLayout(self._wind_y['layout'])
+
+        sliders_row.addWidget(wind_box, stretch=1)
+
+        root.addLayout(sliders_row)
+
+        # buttons row: resume/pause, terminate
+        buttons_row = QtWidgets.QHBoxLayout()
+
+        self._resume_pause_btn = QtWidgets.QPushButton("Resume")
+        self._resume_pause_btn.clicked.connect(self._toggle_resume_pause_resume)
+        buttons_row.addWidget(self._resume_pause_btn)
+
+        self._terminate_btn = QtWidgets.QPushButton("Terminate")
+        self._terminate_btn.clicked.connect(self._on_terminate)
+        buttons_row.addWidget(self._terminate_btn)
+
+        root.addLayout(buttons_row)
 
         # ============ TICKER ============
-        # Keep pause label synced; if landing is active, re-apply landing target
-        self.timer = QtCore.QTimer(self)
-        self.timer.timeout.connect(self._sync_pause_label)
-        self.timer.start(100)
+        self._timer = QtCore.QTimer(self)
+        self._timer.timeout.connect(self._sync_resume_pause_label) # Keep resume_pause label synced
+        self._timer.start(100)
 
         LOGGER.info(f"\tGUI: Initiated {self.__class__.__name__}")
 
-    # ---------- Camera ---------- #
-    def update_camera_view(self, frame):
+    # signals from Simulation and Camera Streamer
+    def update_camera_streamer_frame(self, frame):
         h, w, ch = frame.shape
         bytes_per_line = ch * w
         qt_img = QImage(frame.tobytes(), w, h, bytes_per_line, QImage.Format_RGB888)
-        self.camera_label.setPixmap(QPixmap.fromImage(qt_img))
+        self._camera_streamer_frame.setPixmap(QPixmap.fromImage(qt_img))
 
-    # Keep for compatibility with app.py’s connection, but no UI text (by request).
-    def update_simulation_data(self, data: str):
-        self.simulation_data_label.setText(data)
+    def update_simulation_status(self, status: str):
+        self._simulation_status.setText(status)
+
+    def update_camera_streamer_status(self, status: str):
+        self._camera_streamer_status.setText(status)
 
     # ---------- Helpers ---------- #
     def _group(self, title: str) -> QtWidgets.QGroupBox:
@@ -116,43 +124,41 @@ class GUI(QWidget):
     def _slider_value(self, sdict) -> float:
         return sdict['min'] + sdict['slider'].value() * sdict['step']
 
-    # ---------- Actions ---------- #
-    def _apply_velocity(self):
-        new_vx = self._slider_value(self.vel_x)
-        new_vy = self._slider_value(self.vel_y)
-        vz = float(self.objects['Pad_controller'].velocity[2])  # keep Z unchanged
-        self.objects['Pad_controller'].velocity = np.array([new_vx, new_vy, vz])
-        LOGGER.debug(f"GUI: platform velocity = {new_vx:.2f}, {new_vy:.2f}, {vz:.2f}")
+    # controls send to Simulation
+    def _set_pad_vel(self):
+        new_pad_vel = np.array([
+            self._slider_value(self._pad_vel_x),
+            self._slider_value(self._pad_vel_y),
+            float(self._simulation.get_pad_vel()[2]) # keep Z unchanged
+        ])
+        self._simulation.set_pad_vel(new_pad_vel)
+        LOGGER.debug(f"GUI: platform velocity = {print_array_of_nums(new_pad_vel)}")
 
-    def _apply_wind(self):
-        vx = self._slider_value(self.wind_x)
-        vy = self._slider_value(self.wind_y)
+    def _set_wind(self):
+        new_wind_vel = np.array([
+            self._slider_value(self._wind_x),
+            self._slider_value(self._wind_y),
+            0
+        ])
         ENVIRONMENT.enable_wind(True)
-        ENVIRONMENT.set_wind(velocity_world=[vx, vy, 0.0])
-        LOGGER.debug(f"GUI: wind = {vx:.2f}, {vy:.2f}, {0.00}")
+        ENVIRONMENT.set_wind(velocity_world= new_wind_vel)
+        LOGGER.debug(f"GUI: wind = {print_array_of_nums(new_wind_vel)}")
 
-    def toggle_pause_resume(self):
-        if self.simulation.is_loop_state('pause'):
-            LOGGER.debug("GUI: pressed resume")
-            self.simulation.resume()
-        else:
+    def _toggle_resume_pause_resume(self):
+        if self._simulation.is_running():
             LOGGER.debug("GUI: pressed pause")
-            self.simulation.pause()
+            self._simulation.pause()
+        else:
+            LOGGER.debug("GUI: pressed resume")
+            self._simulation.resume()
 
-    def _sync_pause_label(self):
-        paused = self.simulation.is_loop_state('pause')
-        want = "Resume" if paused else "Pause"
-        if self.pause_btn.text() != want:
-            self.pause_btn.setText(want)
+    def _sync_resume_pause_label(self):
+        running = self._simulation.is_running()
+        want = "Pause" if running else "Resume"
+        if self._resume_pause_btn.text() != want:
+            self._resume_pause_btn.setText(want)
 
     def _on_terminate(self):
         LOGGER.debug("GUI: pressed terminate")
-        self.simulation.terminate()
+        self._simulation.terminate()
         QtCore.QTimer.singleShot(200, QApplication.quit)
-
-    def closeEvent(self, event):
-        # Ensure camera thread halts on close
-        try:
-            self.camera_streamer.terminate()
-        finally:
-            super().closeEvent(event)

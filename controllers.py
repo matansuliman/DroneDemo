@@ -1,6 +1,5 @@
 import numpy as np
 from simple_pid import PID
-from scipy.spatial.transform import Rotation
 
 from helpers import *
 
@@ -12,15 +11,6 @@ from config import CONFIG
 class BasicController:
     def __init__(self, plant):
         self._plant = plant
-        self._log = dict()
-
-    @property
-    def log(self):
-        return self._log
-
-    def clear_log(self):
-        for key in self._log.keys():
-            self._log[key] = []
 
     def status(self):
         raise NotImplementedError("Subclasses should implement this method")
@@ -33,14 +23,6 @@ class QuadrotorController(BasicController):
 
     def __init__(self, quadrotor):
         super().__init__(plant= quadrotor)
-
-        self._log = {
-            'Time (sec)': [],
-            'x_true': [], 'y_true': [], 'z_true': [],
-            'x': [], 'y': [], 'z': [],
-            'roll': [], 'pitch': [], 'yaw': [],
-            'roll_cmd': [], 'pitch_cmd': [], 'yaw_cmd': []
-        }
 
         conf_pid = CONFIG["QuadrotorController"]["pids"]
         self._pids = {
@@ -61,9 +43,14 @@ class QuadrotorController(BasicController):
         }
 
         self._reference = None
+        self._turned_off = False
         self._descend = False
         descend_phases = CONFIG["QuadrotorController"]["descend_phases"]
-        self._descend_phases = list(zip(descend_phases["names"], descend_phases["ff_z"], descend_phases["pid_z_ul"], descend_phases["pid_z_ll"]))
+        self._descend_phases = list(zip(descend_phases["names"],
+                                        descend_phases["ff_z"],
+                                        descend_phases["pid_z_ul"],
+                                        descend_phases["pid_z_ll"],
+                                        descend_phases["epsilon"]))
 
         LOGGER.info(f"\t\t\tController: Initiated {self.__class__.__name__}")
 
@@ -86,50 +73,29 @@ class QuadrotorController(BasicController):
         return self._reference
 
     def _outer_loop(self):
-        pos_true = self._plant.get_true_pos()
         pos = self._plant.get_pos()
 
-        # Log
-        self._log['x_true'].append(pos_true[0])
-        self._log['y_true'].append(pos_true[1])
-        self._log['z_true'].append(pos_true[2])
-
-        self._log['x'].append(pos[0])
-        self._log['y'].append(pos[1])
-        self._log['z'].append(pos[2])
-
-        hz = 20
+        # setpoints and cmd
+        hz = CONFIG['QuadrotorController']['outer_loop']['hz']
         interval = ENVIRONMENT.dt * hz
         current_time = ENVIRONMENT.get_time()
         previous_time = current_time - ENVIRONMENT.dt
 
         if (current_time // interval) != (previous_time // interval):
-            self._pids['pitch'].setpoint = self._pids['x'](pos_true[0])
-            self._pids['roll'].setpoint = -self._pids['y'](pos_true[1])
+            self._pids['pitch'].setpoint = self._pids['x'](pos[0])
+            self._pids['roll'].setpoint = -self._pids['y'](pos[1])
 
         # Altitude throttle
-        throttle = self._pids['z'](pos_true[2]) + self._ff['throttle']
+        throttle = self._pids['z'](pos[2]) + self._ff['throttle']
         return throttle
 
     def _inner_loop(self):
-        # Convert quaternion to Euler angles
-        quat_wxyz = ENVIRONMENT.data.xquat[self._plant.body_id]
-        roll, pitch, yaw = Rotation.from_quat(quat_wxyz[[1, 2, 3, 0]]).as_euler('xyz', degrees=False)
-
-        # Log
-        self._log['roll'].append(roll)
-        self._log['pitch'].append(pitch)
-        self._log['yaw'].append(yaw)
+        roll, pitch, yaw = self._plant.get_orientation()
 
         # Control signals
         roll_cmd = self._pids['roll'](roll)
         pitch_cmd = self._pids['pitch'](pitch)
         yaw_cmd = self._pids['yaw'](yaw)
-
-        # Log
-        self._log['roll_cmd'].append(roll_cmd)
-        self._log['pitch_cmd'].append(pitch_cmd)
-        self._log['yaw_cmd'].append(yaw_cmd)
 
         return roll_cmd, pitch_cmd, yaw_cmd
 
@@ -148,12 +114,12 @@ class QuadrotorController(BasicController):
         ENVIRONMENT.set_ctrls(values)
 
     def _get_phase(self):
-        epsilon = 0.05
         val = self._plant.sensors['rangefinder'].get()
-        for name, ff_z, pid_z_ul, pid_z_ll in self._descend_phases:
+        if val is None:
+            return None
+        for name, ff_z, pid_z_ul, pid_z_ll, epsilon in self._descend_phases:
             if val > ff_z + epsilon:
                 return name, ff_z, pid_z_ul, pid_z_ll
-
         return 'turn_off', 0, 0, 0
 
     def _get_phase_name(self):
@@ -169,6 +135,7 @@ class QuadrotorController(BasicController):
         self._pids['z'].output_limits = sym_limits(CONFIG["QuadrotorController"]["pids"]["z"]["output_limit"])
 
     def _turn_off_plant(self):
+        self._turned_off = True
         ENVIRONMENT.set_ctrls({name: 0.0 for name in self._plant.actuator_names})
 
     def status(self):
@@ -184,7 +151,10 @@ class QuadrotorController(BasicController):
 
     def step(self):
         # Enforce turn off
-        if self.is_done():
+        if self._turned_off:
+            pass
+
+        elif self.is_done():
             self._turn_off_plant()
 
         else:
@@ -194,7 +164,6 @@ class QuadrotorController(BasicController):
             # Outer loop position control -> throttle
             # Inner loop orientation control -> (roll_cmd, pitch_cmd, yaw_cmd)
             # Apply control signals to actuators
-            self._log['Time (sec)'].append(ENVIRONMENT.get_time())  # Log
             self._apply_cmds(self._outer_loop(), *self._inner_loop())
 
 
@@ -202,12 +171,6 @@ class PadController(BasicController):
     def __init__(self, pad):
         super().__init__(plant= pad)
         self._velocity = np.array(CONFIG["Pad"]["default_velocity"], dtype= np.float64)
-
-        self._log = {
-            'Time (sec)': [],
-            'x_true': [], 'y_true': [], 'z_true': [],
-            'x': [], 'y': [], 'z': [],
-        }
         LOGGER.info(f"\t\t\tPadController: Initiated {self.__class__.__name__}")
 
     @property
@@ -227,14 +190,3 @@ class PadController(BasicController):
         # Update velocity
         ENVIRONMENT.set_joint_qvel(self._plant.joint_x_name, float(self._velocity[0]))
         ENVIRONMENT.set_joint_qvel(self._plant.joint_y_name, float(self._velocity[1]))
-
-        # Logging
-        self._log['Time (sec)'].append(ENVIRONMENT.get_time())
-        pos_true = self._plant.get_true_pos()
-        self._log['x_true'].append(pos_true[0])
-        self._log['y_true'].append(pos_true[1])
-        self._log['z_true'].append(pos_true[2])
-        pos = self._plant.get_pos()
-        self._log['x'].append(pos[0])
-        self._log['y'].append(pos[1])
-        self._log['z'].append(pos[2])

@@ -1,28 +1,38 @@
-2025-09-08 15:44:11 [INFO] app: App: Initiating
-2025-09-08 15:44:11 [INFO] app: 	Simulation: Initiating
-2025-09-08 15:44:11 [INFO] app: 		Orchestrator: Initiating
-2025-09-08 15:44:11 [INFO] app: 			Model: Initiated Quadrotor
-2025-09-08 15:44:11 [INFO] app: 			Model: Initiated Pad
-2025-09-08 15:44:11 [INFO] app: 			Controller: Initiated QuadrotorController
-2025-09-08 15:44:11 [INFO] app: 			PadController: Initiated PadController
-2025-09-08 15:44:11 [INFO] app: 			Predictor: Initiating
-2025-09-08 15:44:11 [INFO] app: 				Detector: Initiated ArUcoMarkerDetector
-2025-09-08 15:44:11 [INFO] app: 			Predictor: Initiated ArUcoMarkerPredictor
-2025-09-08 15:44:11 [INFO] app: 		Orchestrator: Initiated Follow
-2025-09-08 15:44:11 [INFO] app: 	Simulation: Initiated SimulationRunner
-2025-09-08 15:44:11 [INFO] app: 	CameraStreamer: Initiated CameraStreamer
-2025-09-08 15:44:11 [INFO] app: 	GUI: Initiated GUI
-2025-09-08 15:44:11 [INFO] app: App: Initiated
-2025-09-08 15:44:11 [INFO] app: App: Running
-2025-09-08 15:44:11 [DEBUG] app: App: Connecting camera streamer to gui
-2025-09-08 15:44:11 [DEBUG] app: App: Connecting simulation to gui
-2025-09-08 15:44:11 [DEBUG] app: App: Start streaming in background thread
-2025-09-08 15:44:11 [DEBUG] app: App: Start simulation loop in background thread
-2025-09-08 15:44:11 [DEBUG] app: Simulation: Running
-2025-09-08 15:44:11 [DEBUG] app: App: Show gui in the main thread
-2025-09-08 15:44:14 [DEBUG] app: GUI: pressed terminate
-2025-09-08 15:44:14 [DEBUG] app: Simulation: Terminate
-2025-09-08 15:44:14 [INFO] app: Simulation: Terminated
-2025-09-08 15:44:14 [INFO] app: App: Exiting
-2025-09-08 15:44:17 [INFO] app: Plots: plotted logs to output_plot.png
-2025-09-08 15:44:17 [INFO] app: App: Exited
+2025-09-11 19:08:33 [INFO] app: App: Initiating
+2025-09-11 19:08:33 [INFO] app: 	Simulation: Initiating
+2025-09-11 19:08:33 [INFO] app: 		Orchestrator: Initiating
+2025-09-11 19:08:33 [INFO] app: 			Model: Initiated Quadrotor
+2025-09-11 19:08:33 [INFO] app: 			Model: Initiated Pad
+2025-09-11 19:08:33 [INFO] app: 			Controller: Initiated QuadrotorController
+2025-09-11 19:08:33 [INFO] app: 			PadController: Initiated PadController
+2025-09-11 19:08:33 [INFO] app: 			Predictor: Initiating
+2025-09-11 19:08:33 [INFO] app: 				Detector: Initiated ArUcoMarkerDetector
+2025-09-11 19:08:33 [INFO] app: 			Predictor: Initiated ArUcoMarkerPredictor
+2025-09-11 19:08:33 [INFO] app: 		Orchestrator: Initiated Follow
+2025-09-11 19:08:33 [INFO] app: 	Simulation: Initiated SimulationRunner
+2025-09-11 19:08:33 [INFO] app: 	CameraStreamer: Initiated CameraStreamer
+2025-09-11 19:08:33 [INFO] app: 	GUI: Initiated GUI
+2025-09-11 19:08:33 [INFO] app: App: Initiated
+2025-09-11 19:08:33 [INFO] app: App: Running
+2025-09-11 19:08:33 [DEBUG] app: App: Connecting camera streamer to gui
+2025-09-11 19:08:33 [DEBUG] app: App: Connecting simulation to gui
+2025-09-11 19:08:33 [DEBUG] app: App: Start streaming in background thread
+2025-09-11 19:08:33 [DEBUG] app: App: Start simulation loop in background thread
+2025-09-11 19:08:33 [DEBUG] app: Simulation: Running
+2025-09-11 19:08:33 [DEBUG] app: App: Show gui in the main thread
+2025-09-11 19:08:40 [DEBUG] app: GUI: platform velocity = 0.30, 0.00, 0.00
+2025-09-11 19:08:40 [DEBUG] app: GUI: platform velocity = 0.30, 0.30, 0.00
+2025-09-11 19:08:42 [DEBUG] app: GUI: platform velocity = 0.90, 0.30, 0.00
+2025-09-11 19:08:42 [DEBUG] app: GUI: platform velocity = 0.90, 1.00, 0.00
+2025-09-11 19:08:42 [DEBUG] app: GUI: platform velocity = 0.90, 1.90, 0.00
+2025-09-11 19:08:43 [DEBUG] app: GUI: platform velocity = 2.00, 1.90, 0.00
+2025-09-11 19:08:44 [DEBUG] app: GUI: platform velocity = 2.40, 1.90, 0.00
+2025-09-11 19:08:44 [DEBUG] app: GUI: platform velocity = 2.40, 2.40, 0.00
+2025-09-11 19:09:05 [DEBUG] app: GUI: pressed terminate
+2025-09-11 19:09:05 [DEBUG] app: Simulation: Terminate
+2025-09-11 19:09:05 [INFO] app: Simulation: Terminated
+2025-09-11 19:09:05 [INFO] app: App: Exiting
+2025-09-11 19:09:07 [INFO] app: Plots: plotted logs to Quadrotor-plot.png
+2025-09-11 19:09:09 [INFO] app: Plots: plotted logs to Pad-plot.png
+2025-09-11 19:09:09 [INFO] app: Plots: finished
+2025-09-11 19:09:09 [INFO] app: App: Exited

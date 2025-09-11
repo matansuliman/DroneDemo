@@ -1,35 +1,90 @@
 import numpy as np
 
+from helpers import *
+
 from environment import ENVIRONMENT
 from logger import LOGGER
 from config import CONFIG
 
 
 class BasicNoise:
+    def __init__(self, scale= 1, offset= 1, drift_rate= 0):
+        self._scale = scale
+        self._offset = offset
+        self._drift_rate = drift_rate
+        self._drift = 0
+
+    def _step(self):
+        self._drift += self._drift_rate
+
+    def apply(self, val):
+        self._step()
+        return (val + self._offset + self._drift) * self._scale
+
+    def __str__(self):
+        res= ""
+        if self._scale != 1: res += f"scale: {self._scale}"
+        res += f"offset: {print_array_of_nums(self._offset)}"
+        if self._drift_rate != 0: res += f"drift_rate: {self._drift_rate}, drift: {self._drift}"
+        return res
+
+
+class PosNoise(BasicNoise):
     def __init__(self):
-        pass
+        conf = CONFIG['Noises']['Pos']
+        super().__init__(
+            scale= conf['scale'],
+            offset= np.append(generate_normal_clipped(*conf['offset'].values(), size= 2), 0),
+            drift_rate= conf['drift_rate']
+        )
+        #LOGGER.debug(f"{self.__class__.__name__} created: {self}")
 
-    def step(self):
-        raise NotImplementedError("Subclasses should implement this method")
+class VelNoise(BasicNoise):
+    def __init__(self):
+        conf = CONFIG['Noises']['Vel']
+        super().__init__(
+            scale= conf['scale'],
+            offset= np.append(generate_normal_clipped(*conf['offset'].values(), size= 2), 0),
+            drift_rate= conf['drift_rate']
+        )
+        #LOGGER.debug(f"{self.__class__.__name__} created: {self}")
 
+class QuatNoise(BasicNoise):
+    def __init__(self):
+        conf = CONFIG['Noises']['Quat']
+        super().__init__(
+            scale= conf['scale'],
+            offset= generate_normal_clipped(*conf['offset'].values(), size= 4),
+            drift_rate= conf['drift_rate']
+        )
+        #LOGGER.debug(f"{self.__class__.__name__} created: {self}")
 
-class GPSNoise(BasicNoise):
-    def __init__(self, bias_stddev= 2):
-        super().__init__()
-        self._bias = np.clip(np.random.normal(0, bias_stddev, size=3), 1, 2)
-        self._bias[2] *= 0 # no vertical bias
+class GyroNoise(BasicNoise):
+    def __init__(self):
+        conf = CONFIG['Noises']['Gyro']
+        super().__init__(
+            scale= conf['scale'],
+            offset= generate_normal_clipped(*conf['offset'].values(), size= 3),
+            drift_rate= conf['drift_rate']
+        )
+        #LOGGER.debug(f"{self.__class__.__name__} created: {self}")
 
-    def step(self):
-        offset = self._bias
-        scale = 1
-        return offset, scale
+class AccelerometerNoise(BasicNoise):
+    def __init__(self):
+        conf = CONFIG['Noises']['Accelerometer']
+        super().__init__(
+            scale= conf['scale'],
+            offset= generate_normal_clipped(*conf['offset'].values(), size= 3),
+            drift_rate= conf['drift_rate']
+        )
+        #LOGGER.debug(f"{self.__class__.__name__} created: {self}")
 
 class RangefinderNoise(BasicNoise):
-    def __init__(self, bias_stddev= 0.0001):
-        super().__init__()
-        self._bias = np.random.normal(0, bias_stddev, size= 1)
-
-    def step(self):
-        offset = self._bias
-        scale = 1
-        return offset, scale
+    def __init__(self):
+        conf = CONFIG['Noises']['Rangefinder']
+        super().__init__(
+            scale= conf['scale'],
+            offset= generate_normal_clipped(*conf['offset'].values(), size=1),
+            drift_rate= conf['drift_rate']
+        )
+        #LOGGER.debug(f"{self.__class__.__name__} created: {self}")

@@ -1,4 +1,4 @@
-import numpy as np
+import math
 import matplotlib.pyplot as plt
 
 from logger import LOGGER
@@ -9,39 +9,34 @@ def plot_safe(ax, x, y, *args, **kwargs):
     min_len = min(len(x), len(y))
     ax.plot(x[:min_len], y[:min_len], *args, **kwargs)
 
-def plot_log(drone_log, platform_log, filename= CONFIG["plotter"]["path"]):
-    fig, axs = plt.subplots(4, 3, figsize=(15, 6))
-    axs = axs.flatten()
+def plot(logs_dict, ext = CONFIG["plotter"]["ext"]):
 
-    x_label = 'Time (sec)'
+    for name, log in logs_dict.items():
+        list_keys = list(log.keys())
+        n_signals = len(list_keys) - 1
 
-    headlines = ['x_true', 'y_true', 'z_true',
-                'x', 'y', 'z',
-                'pitch', 'roll', 'yaw',
-                'pitch_cmd', 'roll_cmd', 'yaw_cmd']
-    
-    y_labels = ['Centimeters', 'Centimeters', 'Centimeters',
-                'Centimeters', 'Centimeters', 'Centimeters',
-                'Radians', 'Radians', 'Radians',
-                'Radians', 'Radians', 'Radians']
+        n_cols = 3
+        n_rows = math.ceil(n_signals / n_cols)
 
-    for i, (headline, y_label) in enumerate(zip(headlines, y_labels)):
-        scale = 100 if y_label == 'Centimeters' else 1
-        if headline in drone_log:
-            plot_safe(axs[i], drone_log[x_label], scale * np.array(drone_log[headline]), label='drone')
-        if headline in platform_log:
-            plot_safe(axs[i], platform_log[x_label], scale * np.array(platform_log[headline]), linestyle= 'dashed', label='platform')
+        fig_width = 5 * n_cols
+        fig_height = 2.5 * n_rows
 
-        # set text
-        axs[i].set_title(headline)
-        axs[i].set_xlabel(x_label)
-        axs[i].set_ylabel(y_label)
+        fig, axs = plt.subplots(n_rows, n_cols, figsize=(fig_width, fig_height))
+        axs = axs.flatten()
 
-        axs[i].grid(True)
-        axs[i].legend()
-        axs[i].xaxis.set_major_formatter(plt.FuncFormatter(lambda val, _: f'{val:.2f}'))
+        x_label = list_keys[0]
+        headlines = list_keys[1:]
+        for i, headline in enumerate(headlines):
+            plot_safe(axs[i], log[x_label], log[headline])
+            axs[i].set_title(headline)
 
-    plt.tight_layout()
-    plt.savefig(filename)
+            axs[i].grid(True)
+            axs[i].legend()
+            axs[i].xaxis.set_major_formatter(plt.FuncFormatter(lambda val, _: f'{val:.2f}'))
 
-    LOGGER.info(f"Plots: plotted logs to {filename}")
+        plt.tight_layout()
+        filename = f"{name}-plot.{ext}"
+        plt.savefig(filename)
+        LOGGER.info(f"Plots: plotted logs to {filename}")
+
+    LOGGER.info(f"Plots: finished")

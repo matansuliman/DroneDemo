@@ -3,6 +3,8 @@ import numpy as np
 from collections import deque
 from PySide6.QtCore import QObject
 
+from helpers import *
+
 from detectors import ArUcoMarkerDetector
 
 from environment import ENVIRONMENT
@@ -45,7 +47,7 @@ class BasicPredictor:
     def status(self):
         raise NotImplementedError("Subclasses should implement this method")
 
-    def predict(self, coef):
+    def predict(self):
         raise NotImplementedError("Subclasses should implement this method")
 
 
@@ -63,8 +65,8 @@ class ArUcoMarkerPredictor(BasicPredictor):
     def status(self):
         status = f"{self.__class__.__name__} status:\n"
         status += f"model: {self._model.status()}"
-        status += f"\tlast prediction: {self.get_last()}\n"
-        status += f"\taccumulated prediction: {self._prediction}\n"
+        status += f"\tlast prediction: {print_array_of_nums(self.get_last())}"
+        status += f"\taccumulated prediction: {print_array_of_nums(self._prediction)}\n"
         return status
 
     def get_last_from_model(self):
@@ -75,11 +77,8 @@ class ArUcoMarkerPredictor(BasicPredictor):
             LOGGER.debug("Predictor: model is full and stable")
             LOGGER.debug("Predictor: predicting")
 
-            # calculate mean of model history and add dim
-            mean_history = np.append(np.mean(self._model.history, axis= 0), 0)
-
-            # apply coef to mean
-            pred = mean_history
+            # calculate mean of model history and add dim(z)
+            pred = np.append(np.mean(self._model.history, axis= 0), 0)
 
             self._prediction += pred
             self._history.append(self._prediction)
