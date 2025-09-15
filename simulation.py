@@ -1,4 +1,4 @@
-import time, threading
+import threading
 
 from PySide6.QtCore import Signal, QObject
 
@@ -7,7 +7,6 @@ from plots import plot
 
 from environment import ENVIRONMENT
 from logger import LOGGER
-from config import CONFIG
 from fps import BasicFPS
 
 
@@ -23,7 +22,7 @@ class BasicSimulationRunner:
     @property
     def orchestrator(self):
         return self._orchestrator
-        
+
     def is_running(self):
         return self._running_event.is_set()
 
@@ -40,7 +39,7 @@ class BasicSimulationRunner:
 
     def terminate(self):
         self._terminated = True
-        LOGGER.debug(f"Simulation: Terminate")
+        LOGGER.debug("Simulation: Terminate")
 
     def status(self):
         raise NotImplementedError("Subclasses should implement this method")
@@ -53,13 +52,12 @@ class SimulationRunner(QObject, BasicSimulationRunner):
     status_ready = Signal(str)
 
     def __init__(self, orchestrator):
-        super().__init__(orchestrator= orchestrator)
+        super().__init__(orchestrator=orchestrator)
         LOGGER.info(f"\tSimulation: Initiated {self.__class__.__name__}")
 
     # Camera Streamer helpers
     def continue_streaming(self):
-        return (not self.is_terminated() and
-                self._running_event.wait())
+        return not self.is_terminated() and self._running_event.wait()
 
     def stream(self, frame):
         self._orchestrator.stream(frame)
@@ -80,11 +78,11 @@ class SimulationRunner(QObject, BasicSimulationRunner):
             logs_dict = self._orchestrator.get_logs()
             drone_log, pad_log = logs_dict["Quadrotor"], logs_dict["Pad"]
 
-            delta_time = drone_log['Time (sec)'][-1] - drone_log['Time (sec)'][0]
+            delta_time = drone_log["Time (sec)"][-1] - drone_log["Time (sec)"][0]
             status += f"\ndelta time (s): {print_num(delta_time)}"
 
-            drone_end_pos = np.array([drone_log['x_true'][-1], drone_log['y_true'][-1]])
-            pad_end_pos = np.array([pad_log['x_true'][-1], drone_log['y_true'][-1]])
+            drone_end_pos = np.array([drone_log["x_true"][-1], drone_log["y_true"][-1]])
+            pad_end_pos = np.array([pad_log["x_true"][-1], drone_log["y_true"][-1]])
             delta_pos = drone_end_pos - pad_end_pos
             status += f"\ndelta pos: {print_array_of_nums(delta_pos)}"
 
@@ -98,7 +96,7 @@ class SimulationRunner(QObject, BasicSimulationRunner):
         LOGGER.debug("Simulation: Running")
         while not self.is_terminated() and self._running_event.wait():
             self._orchestrator.step_scene()  # advance scene
-            self.status_ready.emit(self.status()) # emit status
+            self.status_ready.emit(self.status())  # emit status
             ENVIRONMENT.step()  # advance physics
             self._fps.maintain()
 

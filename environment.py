@@ -2,17 +2,19 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from typing import Dict, Iterable, Optional, Union
-import glfw, mujoco, mujoco.viewer
+import mujoco
+import mujoco.viewer
 import numpy as np
 
-from logger import LOGGER
 from config import CONFIG
 
 
 @dataclass
 class WindConfig:
     enabled: bool = False
-    velocity_world: np.ndarray = field(default_factory=lambda: np.zeros(3))  # m/s, world frame
+    velocity_world: np.ndarray = field(
+        default_factory=lambda: np.zeros(3)
+    )  # m/s, world frame
     air_density: float = 1.225  # kg/m^3
     # Per-body drag coefficient * reference area (Cd * A) [m^2]
     # e.g., {"x2": 0.05, "platform": 0.2}
@@ -33,7 +35,6 @@ class ENV:
         self._joint_id_cache: Dict[str, int] = {}
         self._act_id_cache: Dict[str, int] = {}
         self._sensor_id_cache: Dict[str, int] = {}
-
 
     def launch_viewer(self):
         return mujoco.viewer.launch_passive(self._model, self._data)
@@ -74,7 +75,11 @@ class ENV:
     def enable_wind(self, enabled: bool = True):
         self._wind.enabled = enabled
 
-    def set_wind(self, velocity_world: Union[Iterable[float], np.ndarray], air_density: Optional[float] = None):
+    def set_wind(
+        self,
+        velocity_world: Union[Iterable[float], np.ndarray],
+        air_density: Optional[float] = None,
+    ):
         self._wind.velocity_world = np.asarray(velocity_world, dtype=float).reshape(3)
         if air_density is not None:
             self._wind.air_density = float(air_density)
@@ -112,7 +117,7 @@ class ENV:
             bid = self.body_id(body_name)
 
             v_lin_body = cvel[bid, 3:]  # linear velocity in body frame
-            r_bw = xmat[bid]            # body->world
+            r_bw = xmat[bid]  # body->world
             v_lin_world = r_bw @ v_lin_body
 
             # relative wind: air minus body velocity (world frame)
@@ -172,18 +177,26 @@ class ENV:
         self._dt = float(dt)
 
     # -------------------- Reset helpers --------------------
-    def reset(self, qpos: Optional[Iterable[float]] = None, qvel: Optional[Iterable[float]] = None):
+    def reset(
+        self,
+        qpos: Optional[Iterable[float]] = None,
+        qvel: Optional[Iterable[float]] = None,
+    ):
         """mj_resetData + optional state overwrite."""
         mujoco.mj_resetData(self._model, self._data)
         if qpos is not None:
             qpos = np.asarray(qpos, dtype=float)
             if qpos.size != self._model.nq:
-                raise ValueError(f"qpos has size {qpos.size}, expected {self._model.nq}")
+                raise ValueError(
+                    f"qpos has size {qpos.size}, expected {self._model.nq}"
+                )
             self._data.qpos[:] = qpos
         if qvel is not None:
             qvel = np.asarray(qvel, dtype=float)
             if qvel.size != self._model.nv:
-                raise ValueError(f"qvel has size {qvel.size}, expected {self._model.nv}")
+                raise ValueError(
+                    f"qvel has size {qvel.size}, expected {self._model.nv}"
+                )
             self._data.qvel[:] = qvel
         mujoco.mj_forward(self._model, self._data)
 
@@ -219,7 +232,7 @@ class ENV:
         aid = self._model.actuator(actuator).id
         self._act_id_cache[actuator] = aid
         return aid
-    
+
     def sensor_id(self, sensor: Union[str, int]) -> int:
         """
         Get a sensor id from name or pass-through if already an int.
@@ -232,7 +245,7 @@ class ENV:
         sid = self._model.sensor(sensor).id
         self._sensor_id_cache[sensor] = sid
         return sid
-    
+
     def sensor_name(self, sensor: Union[str, int]) -> str:
         """Return sensor name given id or pass-through if already a name."""
         if isinstance(sensor, str):
@@ -253,16 +266,24 @@ class ENV:
         # Get the freejoint that belongs to this body
         jid = self._model.body_jntnum[bid]
         if jid <= 0:
-            raise ValueError(f"Body '{self.body_name(bid)}' has no joint or not a freejoint.")
+            raise ValueError(
+                f"Body '{self.body_name(bid)}' has no joint or not a freejoint."
+            )
         jadr = self._model.jnt_qposadr[self._model.body_jntadr[bid]]
         jtype = self._model.jnt_type[self._model.body_jntadr[bid]]
         if jtype != mujoco.mjtJoint.mjJNT_FREE:
-            raise ValueError(f"Body '{self.body_name(bid)}' primary joint is not free (type={int(jtype)}).")
+            raise ValueError(
+                f"Body '{self.body_name(bid)}' primary joint is not free (type={int(jtype)})."
+            )
 
         if pos_world is not None:
-            self._data.qpos[jadr : jadr + 3] = np.asarray(pos_world, dtype=float).reshape(3)
+            self._data.qpos[jadr : jadr + 3] = np.asarray(
+                pos_world, dtype=float
+            ).reshape(3)
         if quat_wxyz is not None:
-            self._data.qpos[jadr + 3 : jadr + 7] = np.asarray(quat_wxyz, dtype=float).reshape(4)
+            self._data.qpos[jadr + 3 : jadr + 7] = np.asarray(
+                quat_wxyz, dtype=float
+            ).reshape(4)
 
     def set_free_body_velocity(
         self,
@@ -277,16 +298,24 @@ class ENV:
         bid = self.body_id(body)
         jid = self._model.body_jntnum[bid]
         if jid <= 0:
-            raise ValueError(f"Body '{self.body_name(bid)}' has no joint or not a freejoint.")
+            raise ValueError(
+                f"Body '{self.body_name(bid)}' has no joint or not a freejoint."
+            )
         vadr = self._model.jnt_dofadr[self._model.body_jntadr[bid]]
         jtype = self._model.jnt_type[self._model.body_jntadr[bid]]
         if jtype != mujoco.mjtJoint.mjJNT_FREE:
-            raise ValueError(f"Body '{self.body_name(bid)}' primary joint is not free (type={int(jtype)}).")
+            raise ValueError(
+                f"Body '{self.body_name(bid)}' primary joint is not free (type={int(jtype)})."
+            )
 
         if angvel_world is not None:
-            self._data.qvel[vadr : vadr + 3] = np.asarray(angvel_world, dtype=float).reshape(3)
+            self._data.qvel[vadr : vadr + 3] = np.asarray(
+                angvel_world, dtype=float
+            ).reshape(3)
         if linvel_world is not None:
-            self._data.qvel[vadr + 3 : vadr + 6] = np.asarray(linvel_world, dtype=float).reshape(3)
+            self._data.qvel[vadr + 3 : vadr + 6] = np.asarray(
+                linvel_world, dtype=float
+            ).reshape(3)
 
     def set_joint_qpos(self, joint: Union[str, int], value: float):
         jid = self.joint_id(joint)

@@ -1,11 +1,9 @@
 import cv2
 import numpy as np
 from collections import deque
-from PySide6.QtCore import QObject
 
 from helpers import *
 
-from environment import ENVIRONMENT
 from logger import LOGGER
 from config import CONFIG
 
@@ -13,14 +11,14 @@ from config import CONFIG
 class BasicDetector:
     def __init__(self, model):
         self._model = model
-        self._history = deque(maxlen= CONFIG["Detector"]["history_max_len"])
+        self._history = deque(maxlen=CONFIG["Detector"]["history_max_len"])
 
     @property
     def history(self):
         return list(self._history)
 
-    def clear_history(self, keep= CONFIG["Detector"]["long_term_len"] / 2):
-        tail = list(self._history)[-int(keep):]
+    def clear_history(self, keep=CONFIG["Detector"]["long_term_len"] / 2):
+        tail = list(self._history)[-int(keep) :]
         self._history.clear()
         self._history.extend(tail)
 
@@ -42,24 +40,33 @@ class BasicDetector:
 
 class ArUcoMarkerDetector(BasicDetector):
     def __init__(self):
-        super().__init__(model= cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50))
+        super().__init__(model=cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_4X4_50))
         self._tol_stddev = CONFIG["Detector"]["tol_stddev"]
         self._px_to_meter = CONFIG["Detector"]["px_to_meter"]
         self._height_trained = CONFIG["Detector"]["height_trained"]
         self._image_size_trained = CONFIG["Detector"]["image_size_trained"]
         LOGGER.info(f"\t\t\t\tDetector: Initiated {self.__class__.__name__}")
 
-    def get_stddev(self, mode= 'long-term'):
-        if self.is_empty(): return np.inf
+    def get_stddev(self, mode="long-term"):
+        if self.is_empty():
+            return np.inf
         match mode:
-            case "long-term": history = np.array(self._history)[-CONFIG["Detector"]["long_term_len"]:]
-            case "short-term": history = np.array(self._history)[-CONFIG["Detector"]["short_term_len"]:]
-            case _: raise NotImplementedError
+            case "long-term":
+                history = np.array(self._history)[
+                    -CONFIG["Detector"]["long_term_len"] :
+                ]
+            case "short-term":
+                history = np.array(self._history)[
+                    -CONFIG["Detector"]["short_term_len"] :
+                ]
+            case _:
+                raise NotImplementedError
         std_xy = np.stack(history.std(axis=0, ddof=0))
         return np.round(std_xy, CONFIG["Detector"]["round_precision"])
 
-    def is_stable(self, mode= 'long-term'):
-        if self.is_empty(): return False
+    def is_stable(self, mode="long-term"):
+        if self.is_empty():
+            return False
         return sum(self.get_stddev(mode)) <= self._tol_stddev
 
     def status(self):
@@ -91,7 +98,7 @@ class ArUcoMarkerDetector(BasicDetector):
             centers[1] = -centers[1]
 
             # calculate coef
-            height_ratio = (curr_height / self._height_trained)
+            height_ratio = curr_height / self._height_trained
             coef = height_ratio * self._px_to_meter
             centers *= coef
 

@@ -8,24 +8,26 @@ from guis import GUI
 from streamers import CameraStreamer
 
 from logger import LOGGER
-from config import CONFIG
 
 
 class App:
     def __init__(self):
         LOGGER.info("App: Initiating")
         self._app = QApplication(sys.argv)
-        self._simulation = SimulationRunner(orchestrator= Follow)
-        self._camera_streamer = CameraStreamer(simulation= self._simulation)
-        self._gui = GUI(simulation= self._simulation)
+        self._simulation = SimulationRunner(orchestrator=Follow)
+        self._camera_streamer = CameraStreamer(simulation=self._simulation)
+        self._gui = GUI(simulation=self._simulation)
         LOGGER.info("App: Initiated")
 
-    
     def run(self) -> None:
         LOGGER.info("App: Running")
         LOGGER.debug("App: Connecting camera streamer to gui")
-        self._camera_streamer.frame_ready.connect(self._gui.update_camera_streamer_frame)
-        self._camera_streamer.status_ready.connect(self._gui.update_camera_streamer_status)
+        self._camera_streamer.frame_ready.connect(
+            self._gui.update_camera_streamer_frame
+        )
+        self._camera_streamer.status_ready.connect(
+            self._gui.update_camera_streamer_status
+        )
         LOGGER.debug("App: Connecting simulation to gui")
         self._simulation.status_ready.connect(self._gui.update_simulation_status)
         LOGGER.debug("App: Start streaming in background thread")
@@ -40,6 +42,7 @@ class App:
         LOGGER.info("App: Exiting")
         self._simulation.plot_logs()
         LOGGER.info("App: Exited")
+
 
 if __name__ == "__main__":
     myapp = App()

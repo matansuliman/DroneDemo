@@ -6,7 +6,6 @@ from PySide6.QtWidgets import QApplication, QWidget
 from environment import ENVIRONMENT
 from helpers import print_array_of_nums
 from logger import LOGGER
-from config import CONFIG
 
 
 class GUI(QWidget):
@@ -14,7 +13,9 @@ class GUI(QWidget):
         super().__init__()
         self._simulation = simulation
 
-        self.setWindowTitle(f'{self.__class__.__name__} connected to {simulation.__class__.__name__}')
+        self.setWindowTitle(
+            f"{self.__class__.__name__} connected to {simulation.__class__.__name__}"
+        )
         self.setGeometry(0, 0, 500, 500)
 
         # ============ ROOT ============
@@ -31,7 +32,7 @@ class GUI(QWidget):
 
         # camera streamer view
         self._camera_streamer_frame = QtWidgets.QLabel()
-        root.addWidget(self._camera_streamer_frame, alignment= QtCore.Qt.AlignCenter)
+        root.addWidget(self._camera_streamer_frame, alignment=QtCore.Qt.AlignCenter)
 
         # ============ CONTROLS ============
         sliders_row = QtWidgets.QHBoxLayout()
@@ -39,22 +40,40 @@ class GUI(QWidget):
         # pad vx, vy sliders
         vel_box = self._group("Platform Velocity (m/s)")
 
-        self._pad_vel_x = self._create_slider(-5.0, 5.0, self._simulation.get_pad_vel()[0], "Vx", on_change= self._set_pad_vel, step= 0.1)
-        vel_box.layout().addLayout(self._pad_vel_x['layout'])
+        self._pad_vel_x = self._create_slider(
+            -5.0,
+            5.0,
+            self._simulation.get_pad_vel()[0],
+            "Vx",
+            on_change=self._set_pad_vel,
+            step=0.1,
+        )
+        vel_box.layout().addLayout(self._pad_vel_x["layout"])
 
-        self._pad_vel_y = self._create_slider(-5.0, 5.0, self._simulation.get_pad_vel()[0], "Vy", on_change= self._set_pad_vel, step= 0.1)
-        vel_box.layout().addLayout(self._pad_vel_y['layout'])
+        self._pad_vel_y = self._create_slider(
+            -5.0,
+            5.0,
+            self._simulation.get_pad_vel()[0],
+            "Vy",
+            on_change=self._set_pad_vel,
+            step=0.1,
+        )
+        vel_box.layout().addLayout(self._pad_vel_y["layout"])
 
         sliders_row.addWidget(vel_box, stretch=1)
 
         # wind (world) vx, vy sliders
         wind_box = self._group("Wind (World, m/s)")
 
-        self._wind_x = self._create_slider(-10.0, 10.0, 0.0, "Wind Vx", on_change=self._set_wind, step=0.1)
-        wind_box.layout().addLayout(self._wind_x['layout'])
+        self._wind_x = self._create_slider(
+            -10.0, 10.0, 0.0, "Wind Vx", on_change=self._set_wind, step=0.1
+        )
+        wind_box.layout().addLayout(self._wind_x["layout"])
 
-        self._wind_y = self._create_slider(-10.0, 10.0, 0.0, "Wind Vy", on_change=self._set_wind, step=0.1)
-        wind_box.layout().addLayout(self._wind_y['layout'])
+        self._wind_y = self._create_slider(
+            -10.0, 10.0, 0.0, "Wind Vy", on_change=self._set_wind, step=0.1
+        )
+        wind_box.layout().addLayout(self._wind_y["layout"])
 
         sliders_row.addWidget(wind_box, stretch=1)
 
@@ -75,7 +94,9 @@ class GUI(QWidget):
 
         # ============ TICKER ============
         self._timer = QtCore.QTimer(self)
-        self._timer.timeout.connect(self._sync_resume_pause_label) # Keep resume_pause label synced
+        self._timer.timeout.connect(
+            self._sync_resume_pause_label
+        )  # Keep resume_pause label synced
         self._timer.start(100)
 
         LOGGER.info(f"\tGUI: Initiated {self.__class__.__name__}")
@@ -101,7 +122,9 @@ class GUI(QWidget):
         lay.setSpacing(6)
         return box
 
-    def _create_slider(self, min_val, max_val, init_val, label, on_change=None, step=0.1):
+    def _create_slider(
+        self, min_val, max_val, init_val, label, on_change=None, step=0.1
+    ):
         layout = QtWidgets.QVBoxLayout()
         caption = QtWidgets.QLabel(f"{label}: {init_val:.2f}")
         slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
@@ -119,29 +142,29 @@ class GUI(QWidget):
         slider.valueChanged.connect(_update)
         layout.addWidget(caption)
         layout.addWidget(slider)
-        return {'layout': layout, 'slider': slider, 'min': min_val, 'step': step}
+        return {"layout": layout, "slider": slider, "min": min_val, "step": step}
 
     def _slider_value(self, sdict) -> float:
-        return sdict['min'] + sdict['slider'].value() * sdict['step']
+        return sdict["min"] + sdict["slider"].value() * sdict["step"]
 
     # controls send to Simulation
     def _set_pad_vel(self):
-        new_pad_vel = np.array([
-            self._slider_value(self._pad_vel_x),
-            self._slider_value(self._pad_vel_y),
-            float(self._simulation.get_pad_vel()[2]) # keep Z unchanged
-        ])
+        new_pad_vel = np.array(
+            [
+                self._slider_value(self._pad_vel_x),
+                self._slider_value(self._pad_vel_y),
+                float(self._simulation.get_pad_vel()[2]),  # keep Z unchanged
+            ]
+        )
         self._simulation.set_pad_vel(new_pad_vel)
         LOGGER.debug(f"GUI: platform velocity = {print_array_of_nums(new_pad_vel)}")
 
     def _set_wind(self):
-        new_wind_vel = np.array([
-            self._slider_value(self._wind_x),
-            self._slider_value(self._wind_y),
-            0
-        ])
+        new_wind_vel = np.array(
+            [self._slider_value(self._wind_x), self._slider_value(self._wind_y), 0]
+        )
         ENVIRONMENT.enable_wind(True)
-        ENVIRONMENT.set_wind(velocity_world= new_wind_vel)
+        ENVIRONMENT.set_wind(velocity_world=new_wind_vel)
         LOGGER.debug(f"GUI: wind = {print_array_of_nums(new_wind_vel)}")
 
     def _toggle_resume_pause_resume(self):

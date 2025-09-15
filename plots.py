@@ -4,12 +4,14 @@ import matplotlib.pyplot as plt
 from logger import LOGGER
 from config import CONFIG
 
+
 def plot_safe(ax, x, y, *args, **kwargs):
     """plot but truncate to the shortest length"""
     min_len = min(len(x), len(y))
     ax.plot(x[:min_len], y[:min_len], *args, **kwargs)
 
-def plot(logs_dict, ext = CONFIG["plotter"]["ext"]):
+
+def plot(logs_dict, ext=CONFIG["plotter"]["ext"]):
 
     for name, log in logs_dict.items():
         list_keys = list(log.keys())
@@ -32,11 +34,13 @@ def plot(logs_dict, ext = CONFIG["plotter"]["ext"]):
 
             axs[i].grid(True)
             axs[i].legend()
-            axs[i].xaxis.set_major_formatter(plt.FuncFormatter(lambda val, _: f'{val:.2f}'))
+            axs[i].xaxis.set_major_formatter(
+                plt.FuncFormatter(lambda val, _: f"{val:.2f}")
+            )
 
         plt.tight_layout()
         filename = f"{name}-plot.{ext}"
         plt.savefig(filename)
         LOGGER.info(f"Plots: plotted logs to {filename}")
 
-    LOGGER.info(f"Plots: finished")
+    LOGGER.info("Plots: finished")

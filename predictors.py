@@ -1,15 +1,11 @@
-import cv2
 import numpy as np
 from collections import deque
-from PySide6.QtCore import QObject
 
 from helpers import *
 
 from detectors import ArUcoMarkerDetector
 
-from environment import ENVIRONMENT
 from logger import LOGGER
-from config import CONFIG
 
 
 class BasicPredictor:
@@ -17,7 +13,7 @@ class BasicPredictor:
         LOGGER.info("\t\t\tPredictor: Initiating")
         self._model = model()
         self._history = deque([[0, 0, 0]])
-        self._prediction = np.array([0, 0, 0], dtype= float)
+        self._prediction = np.array([0, 0, 0], dtype=float)
 
     @property
     def model(self):
@@ -53,11 +49,11 @@ class BasicPredictor:
 
 class ArUcoMarkerPredictor(BasicPredictor):
     def __init__(self):
-        super().__init__(model= ArUcoMarkerDetector)
+        super().__init__(model=ArUcoMarkerDetector)
         LOGGER.info(f"\t\t\tPredictor: Initiated {self.__class__.__name__}")
 
-    def is_model_stable(self, mode= 'long-term'):
-        return self._model.is_stable(mode= mode)
+    def is_model_stable(self, mode="long-term"):
+        return self._model.is_stable(mode=mode)
 
     def stream_to_model(self, frame, curr_height):
         self.model.detect(frame, curr_height)
@@ -78,7 +74,7 @@ class ArUcoMarkerPredictor(BasicPredictor):
             LOGGER.debug("Predictor: predicting")
 
             # calculate mean of model history and add dim(z)
-            pred = np.append(np.mean(self._model.history, axis= 0), 0)
+            pred = np.append(np.mean(self._model.history, axis=0), 0)
 
             self._prediction += pred
             self._history.append(self._prediction)
