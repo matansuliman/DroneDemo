@@ -27,6 +27,7 @@ logger:
   datefmt: "%Y-%m-%d %H:%M:%S"
 
 plotter:
+  dir_name: plots
   ext: png
 
 

@@ -1,6 +1,8 @@
 import math
 import matplotlib.pyplot as plt
 
+import os
+
 from logger import LOGGER
 from config import CONFIG
 
@@ -11,7 +13,7 @@ def plot_safe(ax, x, y, *args, **kwargs):
     ax.plot(x[:min_len], y[:min_len], *args, **kwargs)
 
 
-def plot(logs_dict, ext=CONFIG["plotter"]["ext"]):
+def plot(logs_dict, dir_name= CONFIG["plotter"]["dir_name"], ext=CONFIG["plotter"]["ext"]):
 
     for name, log in logs_dict.items():
         list_keys = list(log.keys())
@@ -39,7 +41,9 @@ def plot(logs_dict, ext=CONFIG["plotter"]["ext"]):
             )
 
         plt.tight_layout()
-        filename = f"{name}-plot.{ext}"
+
+        os.makedirs(dir_name, exist_ok=True)
+        filename = f"{dir_name}\\{name}-plot.{ext}"
         plt.savefig(filename)
         LOGGER.info(f"Plots: plotted logs to {filename}")
 
