@@ -84,7 +84,7 @@ class SimulationRunner(QObject, BasicSimulationRunner):
             drone_end_pos = np.array([drone_log["x_true"][-1], drone_log["y_true"][-1]])
             pad_end_pos = np.array([pad_log["x_true"][-1], drone_log["y_true"][-1]])
             delta_pos = drone_end_pos - pad_end_pos
-            status += f"\ndelta pos: {print_array_of_nums(delta_pos)}"
+            status += f"\ndelta pos: {print_for_gui(delta_pos)}"
 
         return status
 

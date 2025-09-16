@@ -13,6 +13,5 @@ venv/
 idea/
 
 
-app.log
-Pad-plot.png
-Quadrotor-plot.png
+*.log
+*.png

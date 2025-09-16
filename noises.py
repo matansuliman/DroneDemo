@@ -23,7 +23,7 @@ class BasicNoise:
         res = ""
         if self._scale != 1:
             res += f"scale: {self._scale}"
-        res += f"offset: {print_array_of_nums(self._offset)}"
+        res += f"offset: {print_for_gui(self._offset)}"
         if self._drift_rate != 0:
             res += f"drift_rate: {self._drift_rate}, drift: {self._drift}"
         return res

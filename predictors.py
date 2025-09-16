@@ -61,8 +61,8 @@ class ArUcoMarkerPredictor(BasicPredictor):
     def status(self):
         status = f"{self.__class__.__name__} status:\n"
         status += f"model: {self._model.status()}"
-        status += f"\tlast prediction: {print_array_of_nums(self.get_last())}"
-        status += f"\taccumulated prediction: {print_array_of_nums(self._prediction)}\n"
+        status += f"\tlast prediction: {print_for_gui(self.get_last())}"
+        status += f"\taccumulated prediction: {print_for_gui(self._prediction)}\n"
         return status
 
     def get_last_from_model(self):

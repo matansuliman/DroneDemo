@@ -1,23 +1,28 @@
 import numpy as np
 
+from logger import LOGGER
+from config import CONFIG
+
 
 def sym_limits(x):
     return -x, x
 
 
-def print_num(x, precision=2):
-    try:
-        return f"{x:.{precision}f}"
-    except Exception as e:
-        print(e)
-        return ""
+def _print_num(x: float | int, precision):
+    return f"{x:.{precision}f}"
 
+def _print_array_of_nums(arr: list, precision):
+    return "  ".join([_print_num(x, precision) for x in arr])
 
-def print_array_of_nums(arr, precision=2):
-    try:
-        return "  ".join([print_num(x, precision) for x in arr])
-    except Exception:
-        return ""
+def print_for_gui(data, precision= CONFIG["gui"]["precision"]):
+    t = type(data)
+    if isinstance(data, list) or isinstance(data, tuple) or isinstance(data, np.ndarray):
+        return _print_array_of_nums(data, precision)
+    elif isinstance(data, int) or isinstance(data, float):
+        return _print_num(data, precision)
+    else:
+        print(t)
+        return "not implemented"
 
 
 def generate_normal_clipped(mean=0, std=1, low=0, high=1, size=1):

@@ -1,5 +1,25 @@
 path_to_xml: "skydio_x2/scene.xml"
 
+gui:
+  geometry_top_left_x: 0
+  geometry_top_left_y: 0
+  geometry_width: 500
+  geometry_height: 500
+  precision: 2
+
+  pad:
+    slider:
+      low: -5
+      high: 5
+      step: 0.1
+
+  wind:
+    slider:
+      low: -10
+      high: 10
+      step: 0.1
+
+
 logger:
   name: app
   path: app.log

@@ -37,8 +37,8 @@ class CameraStreamer(QObject):
 
     def status(self):
         status = f"{self.__class__.__name__} status:"
-        status += f"\t\tcurrent fps: {print_num(self._fps.curr_fps)}"
-        status += f"\ttarget fps: {print_num(self._fps.target_fps)}"
+        status += f"\t\tcurrent fps: {print_for_gui(self._fps.curr_fps)}"
+        status += f"\ttarget fps: {print_for_gui(self._fps.target_fps)}"
         return status
 
     def run(self):
@@ -73,7 +73,6 @@ class CameraStreamer(QObject):
             rgb_image = np.flip(rgb_buffer, axis=0)
 
             # stream to simulation
-            # print(rgb_image.nbytes / 1024)
             self._simulation.stream(frame=rgb_image)  # stream frame to orchestrator
 
             # emit to gui

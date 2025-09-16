@@ -168,8 +168,8 @@ class Quadrotor(BasicModel):
 
     def status(self):
         status = f"{self.__class__.__name__} \ttrue status:"
-        status += f"\tpos: {print_array_of_nums(self.get_true_pos())}"
-        status += f"\tvel: {print_array_of_nums(self.get_true_vel())}\n"
+        status += f"\tpos: {print_for_gui(self.get_true_pos())}"
+        status += f"\tvel: {print_for_gui(self.get_true_vel())}\n"
         for sensor_obj in self._sensors.values():
             status += f"\t\t{sensor_obj.status()}\n"
         return status
@@ -215,8 +215,8 @@ class Pad(BasicModel):
 
     def status(self):
         status = f"{self.__class__.__name__}\t\ttrue status:"
-        status += f"\tpos: {print_array_of_nums(self.get_true_pos())}"
-        status += f"\tvel: {print_array_of_nums(self.get_true_vel())}\n"
+        status += f"\tpos: {print_for_gui(self.get_true_pos())}"
+        status += f"\tvel: {print_for_gui(self.get_true_vel())}\n"
         for sensor_obj in self._sensors.values():
             status += f"\t\t{sensor_obj.status()}\n"
         return status

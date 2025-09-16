@@ -50,8 +50,8 @@ class GPS:
 
     def status(self):
         status = f"{self.__class__.__name__} status:"
-        status += f"\tpos: {print_array_of_nums(self.get_pos())}"
-        status += f"\tvel: {print_array_of_nums(self.get_vel())}"
+        status += f"\tpos: {print_for_gui(self.get_pos())}"
+        status += f"\tvel: {print_for_gui(self.get_vel())}"
         status += f"\tpos noise: {self._pos_noise}"
         return status
 
@@ -94,10 +94,10 @@ class IMU:
         orientation = self.get_orientation()
         return (
             f"{self.__class__.__name__} status:"
-            f"\tquat_wxyz: {print_array_of_nums(quat_wxyz)}"
-            f"\torientation: {print_array_of_nums(orientation)}"
-            f"\tgyro(rad/s): {print_array_of_nums(omega)}"
-            f"\taccelerometer(m/s^2): {print_array_of_nums(accelerometer)}"
+            f"\tquat_wxyz: {print_for_gui(quat_wxyz)}"
+            f"\torientation: {print_for_gui(orientation)}"
+            f"\tgyro(rad/s): {print_for_gui(omega)}"
+            f"\taccelerometer(m/s^2): {print_for_gui(accelerometer)}"
         )
 
 
@@ -113,7 +113,7 @@ class Rangefinder:
 
     def status(self):
         status = f"{self.__class__.__name__} status:"
-        status += f"\tpos: {print_array_of_nums(self.get())}"
+        status += f"\tpos: {print_for_gui(self.get())}"
         status += f"\tnoise: {self._range_noise}"
         return status
 

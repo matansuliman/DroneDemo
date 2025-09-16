@@ -34,8 +34,8 @@ class BasicFPS:
 
     def __str__(self):
         res = ""
-        res += f"\t\tcurrent fps: {print_num(self._curr_fps)}"
-        res += f"\t\ttarget fps: {print_num(self._target_fps)}\n"
+        res += f"\t\tcurrent fps: {print_for_gui(self._curr_fps)}"
+        res += f"\t\ttarget fps: {print_for_gui(self._target_fps)}\n"
         return res
 
 

@@ -176,8 +176,8 @@ class QuadrotorController(BasicController):
 
     def status(self):
         status = f"{self.__class__.__name__} status:"
-        status += f"\treference_pos: {print_array_of_nums(self.get_reference()[0])}"
-        status += f"\treference_vel: {print_array_of_nums(self.get_reference()[1])}"
+        status += f"\treference_pos: {print_for_gui(self.get_reference()[0])}"
+        status += f"\treference_vel: {print_for_gui(self.get_reference()[1])}"
         if self._descend:
             status += f"\tdescend_phase: {self._get_phase()[0]}"
         status += "\n"
@@ -220,7 +220,7 @@ class PadController(BasicController):
 
     def status(self):
         status = f"{self.__class__.__name__} status:\t"
-        status += f"\tvel: {print_array_of_nums(self.velocity)}\n"
+        status += f"\tvel: {print_for_gui(self.velocity)}\n"
         return status
 
     def step(self):

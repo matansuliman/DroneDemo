@@ -84,6 +84,9 @@ class ENV:
         if air_density is not None:
             self._wind.air_density = float(air_density)
 
+    def get_wind_vel(self):
+        return self._wind.velocity_world
+
     def set_body_cda(self, body: Union[str, int], cda: float):
         """Set Cd*A (m^2) used for quadratic drag on a body."""
         name = self.body_name(body)

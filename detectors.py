@@ -71,11 +71,11 @@ class ArUcoMarkerDetector(BasicDetector):
 
     def status(self):
         status = f"{self.__class__.__name__} status:\n"
-        status += f"\tlast detection: {print_array_of_nums(self.get_last())}"
+        status += f"\tlast detection: {print_for_gui(self.get_last())}"
         status += f"\tcounter: {len(self._history)}/{self._history.maxlen}\n"
-        status += f"\tstddev long term: {print_array_of_nums(self.get_stddev())}"
+        status += f"\tstddev long term: {print_for_gui(self.get_stddev())}"
         status += f"\t\tis stable long term: {self.is_stable()}\n"
-        status += f"\tstddev short term: {print_array_of_nums(self.get_stddev(mode= 'short-term'))}"
+        status += f"\tstddev short term: {print_for_gui(self.get_stddev(mode= 'short-term'))}"
         status += f"\tis stable short term: {self.is_stable(mode= 'short-term')}\n"
         return status
 
