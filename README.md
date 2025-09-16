@@ -23,11 +23,12 @@ The drone uses a bottom camera → ArUco detection → simple predictor → PID 
      ```yaml
      plotter:
        ext: png
+     
      camera_streamer:
        resolutions:
          high: [640, 480]
          low:  [320, 240]
-       fps: 30
+       frequency: 30
      ```
      
 3. **Run**
@@ -39,7 +40,7 @@ The drone uses a bottom camera → ArUco detection → simple predictor → PID 
 
 ## What You’ll See
 
-- A GUI with **status readouts** and a **live bottom camera** preview (low‑res).  
+- A GUI with **status readouts** and a **live preview** (low‑res).  
 - The app runs the **simulation** and **camera streamer** on background threads.  
 - When centered and stable above the pad, the controller **descends in phases** and touches down; plots are saved on exit (e.g., `Quadrotor-plot.png`).
 
@@ -48,15 +49,24 @@ The drone uses a bottom camera → ArUco detection → simple predictor → PID 
 ## Repo Map (key files)
 
 - `app.py` – bootstraps threads: GUI, SimulationRunner and CameraStreamer
-- `simulation.py` – main loop, pause/resume/terminate, plotting on exit
-- `orchestrators.py` – scene logic (**Follow**), viewer camera
-- `models.py` – `Quadrotor`, `Pad` with sensors & logging
-- `controllers.py` – PID control & descend phases
-- `streamers.py` – offscreen render → detector + GUI
-- `detectors.py` / `predictors.py` – ArUco pipeline + simple predictor
-- `environment.py` – MuJoCo wrapper, wind/drag helpers
-- `Quadrotor.xml`, `Pad.xml`, `scene.xml` – world and assets
-- `plots.py`, `logger.py`, `helpers.py`, `noises.py`, `fps.py`
+- `simulation.py` – main loop, pause/resume/terminate
+- `gui.py` - graphical user interface
+- `streamers.py` – offscreen render to detector(through simulation) and GUI
+- `fps.py` - maintaining frequency of loops
+- `orchestrators.py` – scene logic (**Follow orchestrator**)
+- `models.py` – `Quadrotor`, `Pad` physical object with sensors & logging
+- `controllers.py` – non-physical, controlling the physical objects
+  (**QuadrotorController** - PID control & descend phases)
+- `sensors.py` - basic MuJoCo sensor and advanced sensors
+- `noises.py` - synthetic noise for sensors
+- `predictors.py` - simple predictor based on history
+- `detectors.py` – detects pad from streamer (ArUco marker detector)
+- `environment.py` – MuJoCo wrapper
+- `plots.py` - plotting logs on png images, called on exit
+- `logger.py` - global log
+- `config.py` / `config.yaml` - global config from yaml
+- `helpers.py` - global helper functions
+- `/skydio_x2` - MuJoCo xml files (world and objects), assets
 
 ---
 

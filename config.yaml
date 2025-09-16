@@ -70,8 +70,7 @@ Detector:
   height_trained: 10
   image_size_trained: [320, 240]
 
-
-  tol_stddev: 0.1
+  tol_stddev: 0.2
   long_term_len: 200
   short_term_len: 20
 
@@ -138,7 +137,7 @@ camera_streamer:
   resolutions:
     high: [640, 480]
     low: [320, 240]
-  fps: 30
+  frequency: 30
 
 
 Noises:

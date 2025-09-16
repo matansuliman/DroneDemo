@@ -19,7 +19,7 @@ class CameraStreamer(QObject):
         super().__init__()
         self._simulation = simulation
 
-        self._fps = BasicFPS(update_rate=CONFIG["camera_streamer"]["fps"])
+        self._fps = BasicFPS(frequency= CONFIG["camera_streamer"]["frequency"])
 
         self._resolutions = CONFIG["camera_streamer"]["resolutions"]
 
