@@ -1,0 +1,25 @@
+Self Evaluation: This project is far from perfect and here is a guideline how to make it that way
+
+    - Timeout: trigger functions
+        - time based: limit elapsed time since the simulation started
+        - detection based: limit elapsed time since last detection of the platform
+        - Catch-up: stuck or not closing the gap for a certain duration
+        - Landing attempts: limit failover attempts
+
+    - Decoupling: some of the files are not decupled from MuJoCo API
+        - Environment
+        - Camera Streamer
+
+    - Configuration:
+        - GUI can be improved to alter PID gains, timeout thresholds, noise parameters...
+
+    - Realism:
+        - noise: can add drift and drift rate
+        - prediction: add weight to prediction, more detections -> higher confidence
+        - drone controller: face the direction of motion
+        - pad controller: add velocity in z axis and introduce acceleration
+
+    - Extensions:
+        - class Log: time as x-axis and multiple y-axis, can plot itself
+        - class Drone: easier to swap models or run multiple instances
+        - class ConfigProfile: have multiple yaml files

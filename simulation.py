@@ -79,7 +79,7 @@ class SimulationRunner(QObject, BasicSimulationRunner):
             drone_log, pad_log = logs_dict["Quadrotor"], logs_dict["Pad"]
 
             delta_time = drone_log["Time (sec)"][-1] - drone_log["Time (sec)"][0]
-            status += f"\ndelta time (s): {print_num(delta_time)}"
+            status += f"\ndelta time (s): {print_for_gui(delta_time)}"
 
             drone_end_pos = np.array([drone_log["x_true"][-1], drone_log["y_true"][-1]])
             pad_end_pos = np.array([pad_log["x_true"][-1], drone_log["y_true"][-1]])

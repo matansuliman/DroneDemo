@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Dict, Iterable, Optional, Union
 import mujoco
 import mujoco.viewer
+import glfw
 import numpy as np
 
 from config import CONFIG
@@ -37,6 +38,7 @@ class ENV:
         self._sensor_id_cache: Dict[str, int] = {}
 
     def launch_viewer(self):
+        glfw.init()
         return mujoco.viewer.launch_passive(self._model, self._data)
 
     # -------------------- Core properties --------------------

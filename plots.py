@@ -35,7 +35,6 @@ def plot(logs_dict, dir_name= CONFIG["plotter"]["dir_name"], ext=CONFIG["plotter
             axs[i].set_title(headline)
 
             axs[i].grid(True)
-            axs[i].legend()
             axs[i].xaxis.set_major_formatter(
                 plt.FuncFormatter(lambda val, _: f"{val:.2f}")
             )
