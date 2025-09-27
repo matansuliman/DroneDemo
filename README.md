@@ -80,10 +80,3 @@ The drone uses a bottom camera → ArUco detection → simple predictor → PID 
 ## Troubleshooting
 
 - **OpenGL/GLFW errors**: update GPU drivers; ensure a desktop OpenGL context is available.
-
-
-
-https://github.com/user-attachments/assets/ea2c1538-b31e-4447-b040-80eab66b4c1d
-
-
-
