@@ -3,7 +3,7 @@
 A MuJoCo + PySide6 desktop app for **precision landing** of a quadrotor on a moving circular pad.  
 The drone uses a bottom camera → ArUco detection → simple predictor → PID controller to align and descend.
 
-> **Platform**: Windows • **Python**: 3.11 • **License**: Private (do not distribute)
+> **Platform**: Windows • **Python**: 3.11
 
 ---
 
