@@ -42,9 +42,3 @@ class App:
         LOGGER.info("App: Exiting")
         self._simulation.plot_logs()
         LOGGER.info("App: Exited")
-
-
-if __name__ == "__main__":
-    myapp = App()
-    myapp.run()
-    myapp.exit()

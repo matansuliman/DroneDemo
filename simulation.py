@@ -16,6 +16,7 @@ class BasicSimulationRunner:
         self._orchestrator = orchestrator()
         self._running_event = threading.Event()
         self._running_event.set()
+        self._running_event.clear()
         self._terminated = False
         self._fps = BasicFPS()
 
