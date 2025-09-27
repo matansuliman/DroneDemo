@@ -19,3 +19,9 @@ Thanks for your interest! This project welcomes small, focused contributions.
 3. Create a feature branch:
    ```bash
    git checkout -b feat/<short-topic>
+   ```
+4. Make changes and run checks locally.
+5. Push your branch and open a Pull Request (PR) with:
+   - What changed and why
+   - How you tested it (commands, versions)
+   - Any screenshots/logs if relevant
