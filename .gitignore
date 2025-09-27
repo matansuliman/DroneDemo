@@ -17,3 +17,7 @@ idea/
 *.png
 
 /plots/
+
+__pycache__/
+*.egg-info/
+.env
